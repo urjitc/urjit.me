@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "urjit-me",
+  "compatibility_date": "2026-07-09",
+  "workers_dev": true,
+  "preview_urls": true,
+  // Apex only. www → urjit.me is a Cloudflare Redirect Rule (not _redirects).
+  // Requires urjit.me to be an active zone on this account before deploy succeeds.
+  "routes": [
+    {
+      "pattern": "urjit.me",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

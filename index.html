@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Urjit Chakraborty</title>
+    <meta
+      name="description"
+      content="Urjit Chakraborty — cofounder at ThinkEx. Personal site with an interactive ASCII drum kit."
+    />
+    <meta name="author" content="Urjit Chakraborty" />
+    <meta name="theme-color" content="#c90b1a" />
+    <meta name="color-scheme" content="light" />
+    <link rel="canonical" href="https://urjit.me/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Urjit" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://urjit.me/" />
+    <meta property="og:title" content="Urjit Chakraborty" />
+    <meta
+      property="og:description"
+      content="Urjit Chakraborty — cofounder at ThinkEx. Personal site with an interactive ASCII drum kit."
+    />
+    <meta property="og:image" content="https://urjit.me/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Urjit — urjit.me" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@urjit_" />
+    <meta name="twitter:creator" content="@urjit_" />
+    <meta name="twitter:title" content="Urjit Chakraborty" />
+    <meta
+      name="twitter:description"
+      content="Urjit Chakraborty — cofounder at ThinkEx. Personal site with an interactive ASCII drum kit."
+    />
+    <meta name="twitter:image" content="https://urjit.me/og.png" />
+    <meta name="twitter:image:alt" content="Urjit — urjit.me" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #c90b1a;
+        color: #fff;
+      }
+    </style>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Urjit Chakraborty",
+        "url": "https://urjit.me/",
+        "sameAs": [
+          "https://github.com/urjitc",
+          "https://www.linkedin.com/in/urjitc",
+          "https://x.com/urjit_"
+        ],
+        "jobTitle": "Cofounder",
+        "worksFor": {
+          "@type": "Organization",
+          "name": "ThinkEx",
+          "url": "https://thinkex.app"
+        }
+      }
+    </script>
+  </head>
+  <body class="page-home">
+    <main>
+      <section class="identity" aria-label="Urjit Chakraborty">
+        <p>Urjit Chakraborty</p>
+        <nav>
+          <a href="https://github.com/urjitc" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://www.linkedin.com/in/urjitc" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a href="https://x.com/urjit_" target="_blank" rel="noopener noreferrer">X</a>
+        </nav>
+      </section>
+      <canvas
+        id="ascii-canvas"
+        aria-label="Interactive ASCII drum kit. Move to push glyphs; click to pulse."
+      ></canvas>
+      <pre id="ascii-fallback" class="sr-only"></pre>
+    </main>
+    <script type="module" src="/src/pages/home.ts"></script>
+  </body>
+</html>

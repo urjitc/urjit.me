@@ -1,0 +1,19 @@
+#ascii-canvas {
+  display: block;
+  width: min(100vw, calc(100vh * 1.299));
+  height: min(100vh, calc(100vw / 1.299));
+  cursor: crosshair;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.85s ease;
+}
+
+#ascii-canvas.is-ready {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ascii-canvas {
+    transition: none;
+  }
+}

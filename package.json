@@ -1,0 +1,22 @@
+{
+  "name": "urjit-me",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "preview:cf": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:dry": "npm run build && wrangler deploy --dry-run"
+  },
+  "dependencies": {
+    "@chenglou/pretext": "^0.0.8"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2",
+    "vite": "^8.1.4",
+    "wrangler": "^4.110.0"
+  }
+}
