@@ -29,18 +29,34 @@
   justify-items: start;
 }
 
-.identity a {
+.identity a,
+.identity button {
   color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
   text-decoration: none;
   text-underline-offset: 3px;
 }
 
+.identity button {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
 .identity a:hover,
-.identity a:focus-visible {
+.identity a:focus-visible,
+.identity button:hover,
+.identity button:focus-visible {
   text-decoration: underline;
 }
 
-.identity a:focus-visible {
+.identity a:focus-visible,
+.identity button:focus-visible {
   outline: 1px solid currentColor;
   outline-offset: 3px;
 }
