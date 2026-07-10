@@ -67,7 +67,6 @@ export async function mountAsciiDrum({
     if (fallback) fallback.textContent = buildFallback(sim)
     settled = true
     waves = []
-    // Paint before the next frame so a cleared bitmap never shows while visible.
     drawSim(context, sim, performance.now())
     startLoop()
     if (!fadedIn) {

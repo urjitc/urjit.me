@@ -43,6 +43,5 @@ export function drawSim(
     const x = homeX[i]! + offsetX + (isCymbal ? Math.sin(elapsed * 10 + r * 0.7) * 0.45 : 0)
     const y = homeY[i]! + offsetY + (isCymbal ? Math.cos(elapsed * 8 + column * 0.5) * 0.35 : 0)
     context.fillText(character, x, y)
-    context.fillText(character, x, y)
   }
 }
