@@ -15,7 +15,7 @@
   z-index: 1;
   top: clamp(22px, 3vw, 48px);
   left: clamp(22px, 3vw, 48px);
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.45;
   letter-spacing: -0.03em;
 }
@@ -53,6 +53,13 @@
 .identity button:hover,
 .identity button:focus-visible {
   text-decoration: underline;
+}
+
+.identity button[data-copied],
+.identity button[data-copied]:hover,
+.identity button[data-copied]:focus-visible {
+  cursor: default;
+  text-decoration: none;
 }
 
 .identity a:focus-visible,
