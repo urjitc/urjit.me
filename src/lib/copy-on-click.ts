@@ -11,9 +11,11 @@ export function mountCopyOnClick(button: HTMLButtonElement): void {
   button.addEventListener('click', () => {
     void navigator.clipboard.writeText(text).then(() => {
       button.textContent = 'Copied'
+      button.dataset.copied = ''
       window.clearTimeout(resetTimer)
       resetTimer = window.setTimeout(() => {
         button.textContent = idleLabel
+        delete button.dataset.copied
       }, COPIED_MS)
     })
   })
