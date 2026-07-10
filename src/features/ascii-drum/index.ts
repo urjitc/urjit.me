@@ -33,7 +33,8 @@ export async function mountAsciiDrum({
   fallback = null,
   sourceUrl = new URL('./drum-kit.svg', import.meta.url).href,
 }: MountOptions): Promise<AsciiDrumHandle> {
-  const context = getCanvasContext(canvas, false)
+  // Opaque so glyph AA blends against the page red, matching CSS text.
+  const context = getCanvasContext(canvas, { alpha: false })
   let sim: Sim | null = null
   let lastFrame = 0
   let frameId = 0

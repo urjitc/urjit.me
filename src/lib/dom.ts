@@ -7,11 +7,20 @@ export function requireElement<T extends typeof Element>(
   return element as InstanceType<T>
 }
 
+type CanvasContextOptions = {
+  willReadFrequently?: boolean
+  /** Opaque canvases AA text against the canvas pixels (not the page behind). */
+  alpha?: boolean
+}
+
 export function getCanvasContext(
   target: HTMLCanvasElement,
-  willReadFrequently = false,
+  options: CanvasContextOptions = {},
 ): CanvasRenderingContext2D {
-  const value = target.getContext('2d', { willReadFrequently })
+  const value = target.getContext('2d', {
+    willReadFrequently: options.willReadFrequently ?? false,
+    alpha: options.alpha ?? true,
+  })
   if (value === null) throw new Error('Canvas 2D is unavailable')
   return value
 }

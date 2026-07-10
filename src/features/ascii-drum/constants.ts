@@ -1,4 +1,7 @@
 export const FONT = 'Paper Mono'
+/** Must match `:root` background / ink in `styles/base.css`. */
+export const BG = '#c90b1a'
+export const INK = '#fff'
 export const COVERAGE_MIN = 0.008
 export const IMPLODE = 0.11
 export const WAVE_LIFE = 1600
