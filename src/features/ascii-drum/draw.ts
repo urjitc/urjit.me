@@ -1,5 +1,4 @@
 import { clamp, hash } from '../../lib/math'
-import { BG, INK } from './constants'
 import { chooseGlyph, scrambleGlyph } from './glyphs'
 import type { Sim } from './sim'
 
@@ -12,13 +11,11 @@ export function drawSim(
   const { n, col, row, homeX, homeY, coverage, noise, cymbal, ox, oy, scramble, width, height, font } =
     active
 
-  // Opaque red clear — AA fringes composite against BG, not the page through alpha.
-  context.fillStyle = BG
-  context.fillRect(0, 0, width, height)
+  context.clearRect(0, 0, width, height)
   context.font = font
   context.textAlign = 'center'
   context.textBaseline = 'middle'
-  context.fillStyle = INK
+  context.fillStyle = '#fff'
 
   for (let i = 0; i < n; i++) {
     const column = col[i]!
@@ -45,6 +42,7 @@ export function drawSim(
 
     const x = homeX[i]! + offsetX + (isCymbal ? Math.sin(elapsed * 10 + r * 0.7) * 0.45 : 0)
     const y = homeY[i]! + offsetY + (isCymbal ? Math.cos(elapsed * 8 + column * 0.5) * 0.35 : 0)
+    context.fillText(character, x, y)
     context.fillText(character, x, y)
   }
 }

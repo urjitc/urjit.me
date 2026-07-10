@@ -4,8 +4,6 @@
   height: min(100vh, calc(100vw / 1.299));
   cursor: crosshair;
   touch-action: none;
-  /* Match `:root` grayscale AA so canvas glyphs track identity text. */
-  -webkit-font-smoothing: antialiased;
   opacity: 0;
   transition: opacity 0.85s ease;
 }

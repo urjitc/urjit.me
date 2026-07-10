@@ -26,7 +26,7 @@ export type Sim = {
 }
 
 const sampleCanvas = document.createElement('canvas')
-const sampleContext = getCanvasContext(sampleCanvas, { willReadFrequently: true })
+const sampleContext = getCanvasContext(sampleCanvas, true)
 
 function measureCell(font: string): number {
   return measureNaturalWidth(prepareWithSegments('M', font))
