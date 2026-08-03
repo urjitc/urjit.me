@@ -1,4 +1,3 @@
-import { measureNaturalWidth, prepareWithSegments } from '@chenglou/pretext'
 import { getCanvasContext } from '../../lib/dom'
 import { clamp, hash } from '../../lib/math'
 import { COVERAGE_MIN, CYMBALS, FONT, OVERSAMPLE } from './constants'
@@ -29,7 +28,8 @@ const sampleCanvas = document.createElement('canvas')
 const sampleContext = getCanvasContext(sampleCanvas, true)
 
 function measureCell(font: string): number {
-  return measureNaturalWidth(prepareWithSegments('M', font))
+  sampleContext.font = font
+  return sampleContext.measureText('M').width
 }
 
 function sampleCoverage(
@@ -89,14 +89,16 @@ export function buildSim(
   const bounds = canvas.getBoundingClientRect()
   const width = Math.max(280, Math.floor(bounds.width))
   const availableHeight = Math.max(216, Math.floor(bounds.height))
-  const fontSize = clamp(width / 168, 4.5, 8)
+  const dpr = Math.min(devicePixelRatio || 1, 2)
+  // Snap the font size to a whole number of device pixels. Fractional sizes make
+  // the rasterizer grayscale-antialias every tiny glyph into a soft blur.
+  const fontSize = Math.round(clamp(width / 168, 4.5, 8) * dpr) / dpr
   const font = `400 ${fontSize}px "${FONT}"`
   const cellWidth = measureCell(font)
   const lineHeight = fontSize * 1.12
   const columns = Math.max(96, Math.floor(width / cellWidth))
   const rows = Math.max(78, Math.round(availableHeight / lineHeight))
   const height = rows * lineHeight
-  const dpr = Math.min(devicePixelRatio || 1, 2)
 
   canvas.width = Math.round(width * dpr)
   canvas.height = Math.round(height * dpr)
@@ -121,8 +123,10 @@ export function buildSim(
     const index = live[i]!
     const c = index % columns
     const r = (index - c) / columns
-    const x = (c + 0.5) * cellWidth
-    const y = (r + 0.5) * lineHeight
+    // Snap each glyph's resting home to the device-pixel grid so the drum is
+    // razor sharp at rest; physics offsets still move it sub-pixel in motion.
+    const x = Math.round((c + 0.5) * cellWidth * dpr) / dpr
+    const y = Math.round((r + 0.5) * lineHeight * dpr) / dpr
     col[i] = c
     row[i] = r
     homeX[i] = x

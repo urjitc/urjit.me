@@ -11,9 +11,6 @@
     "deploy": "npm run build && wrangler deploy",
     "deploy:dry": "npm run build && wrangler deploy --dry-run"
   },
-  "dependencies": {
-    "@chenglou/pretext": "^0.0.8"
-  },
   "devDependencies": {
     "typescript": "^6.0.2",
     "vite": "^8.1.4",
