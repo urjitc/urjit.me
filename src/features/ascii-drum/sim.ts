@@ -1,7 +1,7 @@
 import { getCanvasContext } from '../../lib/dom'
 import { clamp, hash } from '../../lib/math'
 import { COVERAGE_MIN, CYMBALS, FONT, OVERSAMPLE } from './constants'
-import { hitCymbal } from './glyphs'
+import { hitRegion } from './glyphs'
 
 export type Sim = {
   n: number
@@ -133,7 +133,7 @@ export function buildSim(
     homeY[i] = y
     coverage[i] = gridCoverage[index]!
     noise[i] = hash(c, r)
-    cymbal[i] = hitCymbal(x / width, y / height, CYMBALS) ? 1 : 0
+    cymbal[i] = hitRegion(x / width, y / height, CYMBALS) ? 1 : 0
   }
 
   return {

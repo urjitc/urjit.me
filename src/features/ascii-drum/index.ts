@@ -1,7 +1,8 @@
 import { getCanvasContext, loadImage } from '../../lib/dom'
 import { clamp } from '../../lib/math'
-import { FONT } from './constants'
+import { CLICK_TARGETS, FONT } from './constants'
 import { drawSim } from './draw'
+import { hitRegion } from './glyphs'
 import { stepPhysics, type Pointer, type Wave } from './physics'
 import { buildSim, type Sim } from './sim'
 import './ascii-drum.css'
@@ -89,6 +90,12 @@ export async function mountAsciiDrum({
     pointer.y = position.y
     pointer.active = true
     settled = false
+    // crosshair only over the clickable heads and cymbals, default elsewhere
+    if (sim !== null) {
+      canvas.style.cursor = hitRegion(position.x / sim.width, position.y / sim.height, CLICK_TARGETS)
+        ? 'crosshair'
+        : 'default'
+    }
   }
 
   function onPointerLeave(): void {
@@ -96,7 +103,10 @@ export async function mountAsciiDrum({
   }
 
   function onPointerDown(event: PointerEvent): void {
+    if (sim === null) return
     const { x, y } = pointerPosition(event)
+    // only the drum heads and cymbals fire the click pulse
+    if (!hitRegion(x / sim.width, y / sim.height, CLICK_TARGETS)) return
     waves.push({ x, y, born: performance.now() })
     settled = false
   }

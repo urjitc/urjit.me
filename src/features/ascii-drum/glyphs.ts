@@ -18,14 +18,14 @@ export function scrambleGlyph(
   return SCRAMBLE_POOL[Math.floor((value - Math.floor(value)) * SCRAMBLE_POOL.length)] ?? '#'
 }
 
-export function hitCymbal(
+export function hitRegion(
   x: number,
   y: number,
-  cymbals: readonly { x: number; y: number; rx: number; ry: number }[],
+  regions: readonly { x: number; y: number; rx: number; ry: number }[],
 ): boolean {
-  for (const c of cymbals) {
-    const dx = (x - c.x) / c.rx
-    const dy = (y - c.y) / c.ry
+  for (const r of regions) {
+    const dx = (x - r.x) / r.rx
+    const dy = (y - r.y) / r.ry
     if (dx * dx + dy * dy <= 1) return true
   }
   return false
