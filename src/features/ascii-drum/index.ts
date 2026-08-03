@@ -2,7 +2,6 @@ import { getCanvasContext, loadImage } from '../../lib/dom'
 import { clamp } from '../../lib/math'
 import { FONT } from './constants'
 import { drawSim } from './draw'
-import { chooseGlyph } from './glyphs'
 import { stepPhysics, type Pointer, type Wave } from './physics'
 import { buildSim, type Sim } from './sim'
 import './ascii-drum.css'
@@ -13,24 +12,11 @@ export type AsciiDrumHandle = {
 
 type MountOptions = {
   canvas: HTMLCanvasElement
-  fallback?: HTMLPreElement | null
   sourceUrl?: string
-}
-
-function buildFallback(active: Sim): string {
-  const lines = Array.from({ length: active.rows }, () => Array.from({ length: active.columns }, () => ' '))
-  for (let i = 0; i < active.n; i++) {
-    lines[active.row[i]!]![active.col[i]!] = chooseGlyph(
-      clamp(active.coverage[i]! * 3.6, 0, 1),
-      active.noise[i]!,
-    )
-  }
-  return lines.map(line => line.join('')).join('\n')
 }
 
 export async function mountAsciiDrum({
   canvas,
-  fallback = null,
   sourceUrl = new URL('./drum-kit.svg', import.meta.url).href,
 }: MountOptions): Promise<AsciiDrumHandle> {
   const context = getCanvasContext(canvas, false)
@@ -64,7 +50,6 @@ export async function mountAsciiDrum({
   function rebuild(): void {
     if (source.naturalWidth === 0) return
     sim = buildSim(canvas, context, source)
-    if (fallback) fallback.textContent = buildFallback(sim)
     settled = true
     waves = []
     drawSim(context, sim, performance.now())
