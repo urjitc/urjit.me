@@ -3,8 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Urjit</title>
+    <title>Urjit Chakraborty — Product Engineer</title>
     <meta name="author" content="Urjit Chakraborty" />
+    <meta
+      name="description"
+      content="Urjit Chakraborty designs and builds software across product, AI, infrastructure, and robotics."
+    />
     <meta name="theme-color" content="#c90b1a" />
     <meta name="color-scheme" content="light" />
     <link rel="canonical" href="https://urjit.me/" />
@@ -13,7 +17,11 @@
     <meta property="og:site_name" content="Urjit" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://urjit.me/" />
-    <meta property="og:title" content="Urjit" />
+    <meta property="og:title" content="Urjit Chakraborty — Product Engineer" />
+    <meta
+      property="og:description"
+      content="Selected product engineering and open-source work."
+    />
     <meta property="og:image" content="https://urjit.me/og.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
@@ -23,7 +31,11 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@urjit_" />
     <meta name="twitter:creator" content="@urjit_" />
-    <meta name="twitter:title" content="Urjit" />
+    <meta name="twitter:title" content="Urjit Chakraborty — Product Engineer" />
+    <meta
+      name="twitter:description"
+      content="Selected product engineering and open-source work."
+    />
     <meta name="twitter:image" content="https://urjit.me/og.png" />
     <meta name="twitter:image:alt" content="Urjit — urjit.me" />
 
@@ -62,27 +74,39 @@
   </head>
   <body class="page-home">
     <main>
-      <section class="identity" aria-label="Urjit Chakraborty">
-        <p>Urjit Chakraborty</p>
-        <nav>
-          <button
-            type="button"
-            id="copy-email"
-            data-copy="chakrabortyurjit@gmail.com"
-            aria-live="polite"
-          >
-            Email
-          </button>
-          <a href="https://github.com/urjitc" target="_blank" rel="noopener noreferrer">GitHub</a>
-          <a href="https://www.linkedin.com/in/urjitc" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-          <a href="https://x.com/urjit_" target="_blank" rel="noopener noreferrer">X</a>
-        </nav>
+      <section class="hero" id="top" aria-label="Urjit Chakraborty">
+        <div class="identity">
+          <h1>Urjit Chakraborty</h1>
+          <nav aria-label="Primary navigation">
+            <a href="/work/">&gt; Work</a>
+            <button
+              type="button"
+              id="copy-email"
+              data-copy="chakrabortyurjit@gmail.com"
+              aria-live="polite"
+            >
+              &gt; Email
+            </button>
+            <a href="https://github.com/urjitc" target="_blank" rel="noopener noreferrer"
+              >&gt; GitHub</a
+            >
+            <a
+              href="https://www.linkedin.com/in/urjitc"
+              target="_blank"
+              rel="noopener noreferrer"
+              >&gt; LinkedIn</a
+            >
+            <a href="https://x.com/urjit_" target="_blank" rel="noopener noreferrer"
+              >&gt; X</a
+            >
+          </nav>
+        </div>
+        <canvas
+          id="ascii-canvas"
+          role="img"
+          aria-label="Interactive ASCII drum kit. Move to push glyphs; click to pulse."
+        ></canvas>
       </section>
-      <canvas
-        id="ascii-canvas"
-        role="img"
-        aria-label="Interactive ASCII drum kit. Move to push glyphs; click to pulse."
-      ></canvas>
     </main>
     <script type="module" src="/src/pages/home.ts"></script>
   </body>
