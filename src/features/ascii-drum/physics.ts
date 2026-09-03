@@ -30,7 +30,7 @@ export function stepPhysics(
   dt: number,
   settled: boolean,
 ): { waves: Wave[]; settled: boolean } {
-  const { n, homeX, homeY, ox, oy, vx, vy, scramble, width } = active
+  const { n, homeX, homeY, ox, oy, vx, vy, scramble, width, height } = active
   if (settled && !pointer.active && waves.length === 0) {
     pointer.px = pointer.x
     pointer.py = pointer.y
@@ -110,6 +110,20 @@ export function stepPhysics(
     vy[i] = (vy[i]! + ay * dt) * damping
     ox[i] = ox[i]! + vx[i]! * dt
     oy[i] = oy[i]! + vy[i]! * dt
+
+    // The canvas is the visible physics boundary. Bounce displaced glyphs back
+    // instead of letting an energetic wave clip them out of existence.
+    const edge = 6
+    const nextX = homeX[i]! + ox[i]!
+    const nextY = homeY[i]! + oy[i]!
+    if (nextX < edge || nextX > width - edge) {
+      ox[i] = clamp(nextX, edge, width - edge) - homeX[i]!
+      vx[i] = -vx[i]! * 0.32
+    }
+    if (nextY < edge || nextY > height - edge) {
+      oy[i] = clamp(nextY, edge, height - edge) - homeY[i]!
+      vy[i] = -vy[i]! * 0.32
+    }
 
     const target = clamp(scrambleDrive * 1.35, 0, 1)
     const settleRate = target > scramble[i]! ? 28 : 7

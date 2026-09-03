@@ -39,7 +39,7 @@ export async function mountAsciiDrum({
   let frameId = 0
   let settled = true
   let resizeQueued = false
-  let fadedIn = false
+  let introStartedAt: number | null = null
   let visible = document.visibilityState !== 'hidden'
   let waves: Wave[] = []
   const pointer: Pointer = { x: 0, y: 0, px: 0, py: 0, active: false }
@@ -64,14 +64,18 @@ export async function mountAsciiDrum({
   function rebuild(): void {
     if (source.naturalWidth === 0) return
     sim = buildSim(canvas, context, source, useSnare ? [] : CYMBALS)
-    settled = true
-    waves = []
-    drawSim(context, sim, performance.now())
-    startLoop()
-    if (!fadedIn) {
-      fadedIn = true
-      canvas.classList.add('is-ready')
+    const now = performance.now()
+    let introActive = false
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      introStartedAt ??= now
+      const remaining = clamp(1 - (now - introStartedAt) / 900, 0, 1)
+      sim.scramble.fill(remaining)
+      introActive = remaining > 0
     }
+    settled = !introActive
+    waves = []
+    drawSim(context, sim, now)
+    startLoop()
   }
 
   function queueRebuild(): void {
@@ -172,7 +176,6 @@ export async function mountAsciiDrum({
       canvas.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('visibilitychange', onVisibility)
       compactView.removeEventListener('change', onCompactViewChange)
-      canvas.classList.remove('is-ready')
       if (defaultLabel === null) canvas.removeAttribute('aria-label')
       else canvas.setAttribute('aria-label', defaultLabel)
       sim = null

@@ -48,13 +48,23 @@ function sampleCoverage(
   sampleContext.imageSmoothingQuality = 'high'
 
   const sourceRatio = source.naturalWidth / source.naturalHeight
-  const sampleRatio = sampleCanvas.width / sampleCanvas.height
-  const drawWidth = sourceRatio >= sampleRatio ? sampleCanvas.width : sampleCanvas.height * sourceRatio
-  const drawHeight = sourceRatio >= sampleRatio ? sampleCanvas.width / sourceRatio : sampleCanvas.height
+  const compactPortrait = sourceRatio < 1 && height >= width
+  const compactLandscape = sourceRatio < 1 && width > height
+  const safeTop = compactPortrait ? clamp(width * 0.64, 242, 270) * OVERSAMPLE : 0
+  const safeBottom = compactPortrait ? 18 * OVERSAMPLE : 0
+  const availableWidth = sampleCanvas.width * (compactPortrait ? 0.82 : compactLandscape ? 0.42 : 1)
+  const availableHeight = compactLandscape
+    ? sampleCanvas.height * 0.9
+    : sampleCanvas.height - safeTop - safeBottom
+  const availableRatio = availableWidth / availableHeight
+  const drawWidth = sourceRatio >= availableRatio ? availableWidth : availableHeight * sourceRatio
+  const drawHeight = sourceRatio >= availableRatio ? availableWidth / sourceRatio : availableHeight
   sampleContext.drawImage(
     source,
-    (sampleCanvas.width - drawWidth) / 2,
-    (sampleCanvas.height - drawHeight) / 2,
+    compactLandscape
+      ? sampleCanvas.width - drawWidth - 12 * OVERSAMPLE
+      : (sampleCanvas.width - drawWidth) / 2,
+    safeTop + (availableHeight - drawHeight) / 2,
     drawWidth,
     drawHeight,
   )

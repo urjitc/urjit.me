@@ -4,24 +4,14 @@
   height: min(100vh, calc(100vw / 1.299));
   cursor: default;
   touch-action: none;
-  opacity: 0;
-  transition: opacity 0.85s ease;
-}
-
-#ascii-canvas.is-ready {
-  opacity: 1;
 }
 
 @media (max-width: 640px) {
   #ascii-canvas {
-    width: min(82vw, calc(76vh * 0.586));
-    height: min(76vh, calc(82vw / 0.586));
-    transform: translateY(6vh);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #ascii-canvas {
-    transition: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: pan-y;
   }
 }
