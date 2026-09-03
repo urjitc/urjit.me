@@ -12,6 +12,14 @@
   opacity: 1;
 }
 
+@media (max-width: 640px) {
+  #ascii-canvas {
+    width: min(82vw, calc(76vh * 0.586));
+    height: min(76vh, calc(82vw / 0.586));
+    transform: translateY(6vh);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #ascii-canvas {
     transition: none;

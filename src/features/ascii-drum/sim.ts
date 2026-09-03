@@ -85,6 +85,7 @@ export function buildSim(
   canvas: HTMLCanvasElement,
   context: CanvasRenderingContext2D,
   source: HTMLImageElement,
+  cymbals: readonly { x: number; y: number; rx: number; ry: number }[] = CYMBALS,
 ): Sim {
   const bounds = canvas.getBoundingClientRect()
   const width = Math.max(280, Math.floor(bounds.width))
@@ -92,12 +93,15 @@ export function buildSim(
   const dpr = Math.min(devicePixelRatio || 1, 2)
   // Snap the font size to a whole number of device pixels. Fractional sizes make
   // the rasterizer grayscale-antialias every tiny glyph into a soft blur.
-  const fontSize = Math.round(clamp(width / 168, 4.5, 8) * dpr) / dpr
+  const isPortraitSource = source.naturalHeight > source.naturalWidth
+  const fontSize = Math.round(
+    (isPortraitSource ? clamp(width / 85, 7.25, 9) : clamp(width / 150, 5.25, 9)) * dpr,
+  ) / dpr
   const font = `400 ${fontSize}px "${FONT}"`
   const cellWidth = measureCell(font)
   const lineHeight = fontSize * 1.12
-  const columns = Math.max(96, Math.floor(width / cellWidth))
-  const rows = Math.max(78, Math.round(availableHeight / lineHeight))
+  const columns = Math.max(isPortraitSource ? 80 : 96, Math.floor(width / cellWidth))
+  const rows = Math.max(isPortraitSource ? 64 : 78, Math.round(availableHeight / lineHeight))
   const height = rows * lineHeight
 
   canvas.width = Math.round(width * dpr)
@@ -133,7 +137,7 @@ export function buildSim(
     homeY[i] = y
     coverage[i] = gridCoverage[index]!
     noise[i] = hash(c, r)
-    cymbal[i] = hitRegion(x / width, y / height, CYMBALS) ? 1 : 0
+    cymbal[i] = hitRegion(x / width, y / height, cymbals) ? 1 : 0
   }
 
   return {

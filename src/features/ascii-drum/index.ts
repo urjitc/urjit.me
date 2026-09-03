@@ -1,6 +1,6 @@
 import { getCanvasContext, loadImage } from '../../lib/dom'
 import { clamp } from '../../lib/math'
-import { CLICK_TARGETS, FONT } from './constants'
+import { CLICK_TARGETS, CYMBALS, FONT } from './constants'
 import { drawSim } from './draw'
 import { hitRegion } from './glyphs'
 import { stepPhysics, type Pointer, type Wave } from './physics'
@@ -18,8 +18,21 @@ type MountOptions = {
 
 export async function mountAsciiDrum({
   canvas,
-  sourceUrl = new URL('./drum-kit.svg', import.meta.url).href,
+  sourceUrl,
 }: MountOptions): Promise<AsciiDrumHandle> {
+  const compactView = matchMedia('(max-width: 640px)')
+  const defaultLabel = canvas.getAttribute('aria-label')
+  let useSnare = sourceUrl === undefined && compactView.matches
+  const defaultSourceUrl = () => useSnare
+    ? new URL('./snare.svg', import.meta.url).href
+    : new URL('./drum-kit.svg', import.meta.url).href
+  const setLabel = () => canvas.setAttribute(
+    'aria-label',
+    useSnare
+      ? 'Interactive ASCII snare drum. Move to push glyphs; tap to pulse.'
+      : defaultLabel ?? 'Interactive ASCII drum kit. Move to push glyphs; click to pulse.',
+  )
+  setLabel()
   const context = getCanvasContext(canvas, false)
   let sim: Sim | null = null
   let lastFrame = 0
@@ -31,8 +44,8 @@ export async function mountAsciiDrum({
   let waves: Wave[] = []
   const pointer: Pointer = { x: 0, y: 0, px: 0, py: 0, active: false }
 
-  const [source] = await Promise.all([
-    loadImage(sourceUrl),
+  let [source] = await Promise.all([
+    loadImage(sourceUrl ?? defaultSourceUrl()),
     document.fonts.load(`400 12px "${FONT}"`),
   ])
 
@@ -50,7 +63,7 @@ export async function mountAsciiDrum({
 
   function rebuild(): void {
     if (source.naturalWidth === 0) return
-    sim = buildSim(canvas, context, source)
+    sim = buildSim(canvas, context, source, useSnare ? [] : CYMBALS)
     settled = true
     waves = []
     drawSim(context, sim, performance.now())
@@ -92,7 +105,8 @@ export async function mountAsciiDrum({
     settled = false
     // crosshair only over the clickable heads and cymbals, default elsewhere
     if (sim !== null) {
-      canvas.style.cursor = hitRegion(position.x / sim.width, position.y / sim.height, CLICK_TARGETS)
+      canvas.style.cursor = useSnare
+        || hitRegion(position.x / sim.width, position.y / sim.height, CLICK_TARGETS)
         ? 'crosshair'
         : 'default'
     }
@@ -106,7 +120,7 @@ export async function mountAsciiDrum({
     if (sim === null) return
     const { x, y } = pointerPosition(event)
     // only the drum heads and cymbals fire the click pulse
-    if (!hitRegion(x / sim.width, y / sim.height, CLICK_TARGETS)) return
+    if (!useSnare && !hitRegion(x / sim.width, y / sim.height, CLICK_TARGETS)) return
     waves.push({ x, y, born: performance.now() })
     settled = false
   }
@@ -115,6 +129,14 @@ export async function mountAsciiDrum({
     visible = document.visibilityState !== 'hidden'
     if (visible) startLoop()
     else stopLoop()
+  }
+
+  async function onCompactViewChange(): Promise<void> {
+    if (sourceUrl !== undefined) return
+    useSnare = compactView.matches
+    setLabel()
+    source = await loadImage(defaultSourceUrl())
+    rebuild()
   }
 
   function tick(now: number): void {
@@ -137,6 +159,7 @@ export async function mountAsciiDrum({
   canvas.addEventListener('pointerleave', onPointerLeave)
   canvas.addEventListener('pointerdown', onPointerDown)
   document.addEventListener('visibilitychange', onVisibility)
+  compactView.addEventListener('change', onCompactViewChange)
 
   rebuild()
 
@@ -148,7 +171,10 @@ export async function mountAsciiDrum({
       canvas.removeEventListener('pointerleave', onPointerLeave)
       canvas.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('visibilitychange', onVisibility)
+      compactView.removeEventListener('change', onCompactViewChange)
       canvas.classList.remove('is-ready')
+      if (defaultLabel === null) canvas.removeAttribute('aria-label')
+      else canvas.setAttribute('aria-label', defaultLabel)
       sim = null
     },
   }
