@@ -4,7 +4,7 @@
   "compatibility_date": "2026-07-09",
   "workers_dev": true,
   "preview_urls": true,
-  // Only the homepage runs through it: Markdown for agents that ask (worker/index.ts).
+  // Only the homepage and the jam API run through it (worker/index.ts).
   "main": "./worker/index.ts",
   // Apex only. www → urjit.me is a Cloudflare Redirect Rule (not _redirects).
   // Requires urjit.me to be an active zone on this account before deploy succeeds.
@@ -17,10 +17,25 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/"],
+    "run_worker_first": ["/", "/api/*"],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
+  // The public jam wall (worker/jams.ts).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "urjit-me-jams",
+      "database_id": "a87f9acf-9063-477f-a773-3606e4796ed0",
+      "migrations_dir": "worker/migrations"
+    }
+  ],
+  // Checks jam names (Llama Guard).
+  "ai": { "binding": "AI", "remote": true },
+  // Jam posts, per visitor and Cloudflare location.
+  "ratelimits": [
+    { "name": "POST_LIMIT", "namespace_id": "1001", "simple": { "limit": 3, "period": 60 } }
+  ],
   "observability": {
     "enabled": true
   }

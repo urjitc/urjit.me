@@ -43,6 +43,7 @@
     <link rel="stylesheet" href="/src/styles/base.css" />
     <link rel="stylesheet" href="/src/pages/home.css" />
     <link rel="stylesheet" href="/src/features/drum-kit/drum-kit.css" />
+    <link rel="stylesheet" href="/src/features/looper/looper.css" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -181,6 +182,30 @@
             </svg>
             <span>Sound on</span>
           </button>
+        </div>
+        <!-- Looper and jam wall (src/features/looper). Buttons not needed yet are inert,
+             which looper.css folds away. -->
+        <div class="looper" id="looper" role="group" aria-label="Loop">
+          <div class="loop-bar">
+            <div class="loop-buttons">
+              <button type="button" data-loop="record" aria-pressed="false"><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" /></svg><span class="label">Record</span></span></button>
+              <button type="button" data-loop="play" class="optional" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path class="play" d="M8 5v14l11 -7z" /><path class="stop" d="M6 6h12v12h-12z" /></svg><span class="label">Play</span></span></button>
+              <button type="button" data-loop="undo" class="optional" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg><span class="label">Undo</span></span></button>
+              <button type="button" data-wall="post" class="optional" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 19v-14" /><path d="M6 11l6 -6l6 6" /></svg><span class="label">Post</span></span></button>
+              <button type="button" data-wall="toggle" aria-expanded="false" aria-controls="jam-list"><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 6h10" /><path d="M4 12h10" /><path d="M4 18h6" /><path d="M17 18v-12l4 2" /><circle cx="15" cy="18" r="2" /></svg><span class="label">Jams</span></span></button>
+            </div>
+            <form class="post-form" inert>
+              <input name="name" maxlength="24" autocomplete="off" required placeholder="Name your jam" aria-label="Jam name" />
+              <button type="submit" disabled>Post</button>
+              <button type="button" data-wall="cancel">Cancel</button>
+            </form>
+          </div>
+          <div class="loop-info">
+            <span class="loop-beats" aria-hidden="true"></span>
+            <span class="loop-count" aria-hidden="true"></span>
+            <p class="loop-status" role="status"></p>
+          </div>
+          <div class="jam-drawer" inert><ul class="jam-list" id="jam-list"></ul></div>
         </div>
       </section>
 

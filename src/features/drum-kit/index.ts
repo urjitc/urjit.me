@@ -1,4 +1,5 @@
-import { KITS, loadSamples, playDrum, wakeAudio, type Kit } from './synth'
+import { isSound, type Sound } from '../looper/jam'
+import { audioTime, KITS, loadSamples, playDrum, wakeAudio, type Kit } from './synth'
 
 const HOLD_MS = 500
 /** How long the drumstick cursor shows a stick down after a click (ms). */
@@ -237,11 +238,22 @@ function placeKeys(keyLabels: Map<HTMLElement, HTMLElement[]>): void {
  * href (mailto for the snare). Cmd/Ctrl-click and keyboard Enter follow the link
  * directly; letter keys play the kit, and Space is always the kick.
  */
+/** What the looper needs from the kit. */
+export interface DrumKit {
+  /** Calls `listener` with each sound played by hand (a click, tap or key) and the audio
+      clock time it played at (none with the sound off). */
+  onPlay(listener: (sound: Sound, at?: number) => void): void
+  /** Plays a sound at a time on the audio clock, and moves its drum as it sounds. */
+  playAt(sound: Sound, at: number): void
+  kit(): Kit
+  setKit(kit: Kit): void
+}
+
 export function mountDrumKit(
   kit: HTMLElement,
   soundToggle: HTMLButtonElement,
   kitSwitch: HTMLElement,
-): void {
+): DrumKit {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
   // The drawings' moving layers, by name (each drum's sound, plus the pedal's two parts):
   // one per drawing, wide and portrait, moved together; only the one on screen shows.
@@ -394,14 +406,23 @@ export function mountDrumKit(
     }
   }
 
-  /** Plays a piece (its own sound unless another is given) and moves it to match. */
+  const playListeners: ((sound: Sound, at?: number) => void)[] = []
+
+  /** Plays a piece by hand (its own sound unless another is given) and moves it to match. */
   function hit(piece: HTMLElement, sound = piece.dataset.sound): void {
-    if (soundOn && sound) playDrum(currentKit, sound)
-    else if (!nudged) {
+    const at = soundOn && sound ? playDrum(currentKit, sound) : undefined
+    if (at === undefined && !nudged) {
       nudged = true
       if (!reducedMotion.matches) soundToggle.animate(NUDGE, { duration: 900 })
     }
-    if (sound) listen(sound)
+    if (!isSound(sound)) return
+    listen(sound)
+    move(piece, sound)
+    for (const listener of playListeners) listener(sound, at)
+  }
+
+  /** Moves a piece as it's struck with a sound: its head, its icon, and for the kick the pedal and face. */
+  function move(piece: HTMLElement, sound: Sound): void {
     if (reducedMotion.matches) return
     if (sound === 'bell') {
       animateAll(parts.get('ride'), BELL_HIT, 260)
@@ -412,10 +433,10 @@ export function mountDrumKit(
     const keyframes = piece.classList.contains('cymbal') ? CYMBAL_HIT : DRUM_HIT
     const timing = { duration: 420, easing: 'ease-out' }
     // The kick head waits for the beater to land on it.
-    const isKick = piece.dataset.sound === 'kick'
+    const isKick = sound === 'kick'
     const headTiming = { ...timing, delay: isKick ? PEDAL_MS * PEDAL_IMPACT : 0 }
     animateAll([piece], keyframes, headTiming)
-    animateAll(parts.get(piece.dataset.sound ?? ''), keyframes, headTiming)
+    animateAll(parts.get(sound), keyframes, headTiming)
     if (isKick) {
       for (const [name, keyframes] of [['beater', BEATER_HIT], ['footboard', FOOTBOARD_HIT]] as const) {
         animateAll(parts.get(name), keyframes, PEDAL_MS)
@@ -489,6 +510,8 @@ export function mountDrumKit(
 
   document.addEventListener('keydown', (event) => {
     if (event.metaKey || event.ctrlKey || event.altKey) return
+    // Typing in a field (a jam's name) isn't drumming.
+    if (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable]')) return
     const hidden = HIDDEN_KEYS[event.code]
     const name = KEYS[event.code] ?? hidden?.piece
     if (!name) return
@@ -526,4 +549,16 @@ export function mountDrumKit(
 
   renderToggle()
   renderKit()
+
+  return {
+    onPlay: (listener) => playListeners.push(listener),
+    playAt(sound, at) {
+      if (soundOn) playDrum(currentKit, sound, at)
+      const piece = kit.querySelector<HTMLElement>(`[data-sound="${sound === 'bell' ? 'ride' : sound}"]`)
+      // Moves when it plays, as a drum played by hand does.
+      if (piece) setTimeout(() => move(piece, sound), (at - audioTime()) * 1000)
+    },
+    kit: () => currentKit,
+    setKit,
+  }
 }

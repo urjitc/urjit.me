@@ -22,7 +22,8 @@ function agentMarkdown(): Plugin {
 export default defineConfig({
   plugins: [agentMarkdown()],
   // Agent worktrees live in .claude/; their edits shouldn't reload this server's pages.
-  server: { watch: { ignored: ['**/.claude/**'] } },
+  // The jam wall's API runs in the Worker: start it with `npx wrangler dev` alongside.
+  server: { watch: { ignored: ['**/.claude/**'] }, proxy: { '/api': 'http://localhost:8787' } },
   build: {
     // The 404 page is its own entry; Cloudflare serves dist/404.html for unknown paths.
     rollupOptions: { input: { main: 'index.html', notFound: '404.html' } },

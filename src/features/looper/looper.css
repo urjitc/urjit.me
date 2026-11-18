@@ -1,0 +1,298 @@
+/* The looper and jam wall, under the kit controls in their quiet style: muted text buttons
+   with hairline icons (index.ts, wall.ts). Nothing jumps between states: buttons that
+   aren't needed yet are `inert` and fold to nothing, sliding the rest along; the name field
+   fades in over the buttons on the same line; one info line holds the count-in, the beat
+   dots or a message; and the jam list folds open. Each turns visible at once when shown
+   (so it can take focus straight away) and hidden only once it has faded out. */
+.looper {
+  --ease: cubic-bezier(0.2, 0.9, 0.3, 1);
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+/* The buttons and the name field share one line, crossfading. */
+.loop-bar,
+.loop-info {
+  display: grid;
+  place-items: center;
+}
+
+.loop-bar > *,
+.loop-info > * {
+  grid-area: 1 / 1;
+}
+
+.loop-buttons,
+.post-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity 180ms ease-out,
+    translate 180ms var(--ease);
+}
+
+.loop-buttons[inert],
+.post-form[inert] {
+  opacity: 0;
+  visibility: hidden;
+  translate: 0 3px;
+  transition:
+    opacity 180ms ease-out,
+    translate 180ms var(--ease),
+    visibility 0s 180ms;
+}
+
+.looper button {
+  margin: 0;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: color 120ms;
+}
+
+.looper button:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .looper button:hover {
+    color: var(--fg);
+  }
+}
+
+.looper .inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* A button that isn't needed yet folds its width (and padding) to nothing. */
+.looper .optional {
+  display: grid;
+  grid-template-columns: 1fr;
+  transition:
+    grid-template-columns 220ms var(--ease),
+    padding 220ms var(--ease),
+    opacity 160ms ease-out,
+    color 120ms;
+}
+
+.looper .optional[inert] {
+  grid-template-columns: 0fr;
+  padding-inline: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-columns 220ms var(--ease),
+    padding 220ms var(--ease),
+    opacity 160ms ease-out,
+    visibility 0s 220ms;
+}
+
+.looper .icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  stroke-width: 1px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.looper .icon * {
+  vector-effect: non-scaling-stroke;
+}
+
+/* Record fills its ring and pulses while recording; Play turns to Stop while playing. */
+.looper [data-loop="record"] {
+  color: var(--fg);
+}
+
+[data-loop="record"] circle {
+  transition: fill 150ms;
+}
+
+[data-loop="record"][aria-pressed="true"] circle {
+  fill: currentColor;
+  animation: loop-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes loop-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Same width either way, so the row doesn't shift. */
+[data-loop="play"] .label {
+  min-width: 2.2em;
+}
+
+[data-loop="play"] .stop,
+.looper[data-playing="true"] [data-loop="play"] .play {
+  display: none;
+}
+
+.looper[data-playing="true"] [data-loop="play"] .stop {
+  display: inline;
+}
+
+.post-form input {
+  width: 16ch;
+  margin-right: 4px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--fg) 35%, transparent);
+  border-radius: 6px;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+}
+
+.post-form input::placeholder {
+  color: var(--muted);
+}
+
+.post-form input:focus-visible {
+  outline: none;
+  border-color: var(--fg);
+}
+
+.looper .post-form [type="submit"] {
+  color: var(--fg);
+}
+
+/* The info line keeps its height, empty or not. A message shows over the count-in, and
+   either over the beat dots. */
+.loop-info {
+  height: 22px;
+}
+
+.loop-info > * {
+  transition: opacity 180ms ease-out;
+}
+
+.loop-beats {
+  display: flex;
+  gap: 9px;
+}
+
+.looper:not([data-playing="true"]) .loop-beats,
+.loop-info:has(.loop-count:not(:empty)) .loop-beats,
+.loop-info:has(.loop-status:not(:empty)) .loop-beats,
+.loop-info:has(.loop-status:not(:empty)) .loop-count {
+  opacity: 0;
+}
+
+.loop-beats i {
+  width: 5px;
+  height: 5px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.45;
+  transition:
+    background-color 60ms,
+    opacity 60ms;
+}
+
+/* A wider gap between the two bars. */
+.loop-beats i:nth-child(4) {
+  margin-right: 7px;
+}
+
+.loop-beats i.lit {
+  background: currentColor;
+  opacity: 1;
+}
+
+.loop-count {
+  color: var(--fg);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.loop-status {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* The wall folds open under the info line: a short list that scrolls, each jam a row
+   that plays it, ringed in hairline while it plays. */
+.jam-drawer {
+  display: grid;
+  grid-template-rows: 1fr;
+  width: min(360px, 100%);
+  transition:
+    grid-template-rows 240ms var(--ease),
+    opacity 200ms ease-out;
+}
+
+.jam-drawer[inert] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 240ms var(--ease),
+    opacity 200ms ease-out,
+    visibility 0s 240ms;
+}
+
+.jam-list {
+  min-height: 0;
+  max-height: 260px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.looper .jam {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  color: var(--fg);
+  text-align: left;
+  transition: border-color 140ms;
+}
+
+.looper .jam[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--fg) 55%, transparent);
+}
+
+.jam span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jam-meta {
+  flex: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .looper *,
+  .looper *::before {
+    transition-duration: 0s !important;
+    animation: none !important;
+  }
+}

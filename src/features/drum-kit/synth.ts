@@ -12,7 +12,9 @@ const NOISE_SECONDS = 2
 const REVERB_SECONDS = 1.6
 const HAT_FREQS = [205.3, 304.4, 369.6, 522.7, 540, 800] // the TR-808's six cymbal squares
 
-export const KITS = ['rock', 'trap', '8bit'] as const
+import { KITS } from '../looper/jam'
+
+export { KITS }
 export type Kit = (typeof KITS)[number]
 
 type Voice = (play: Play, at: number) => void
@@ -351,16 +353,23 @@ export function wakeAudio(): void {
   void output?.audio.resume()
 }
 
-/** Plays a drum on a kit. Call from a user gesture: the first call creates the audio context. */
-export function playDrum(kit: Kit, name: string): void {
+/** The audio clock, in seconds: what playDrum's `at` is measured on. */
+export function audioTime(): number {
+  return getOutput().audio.currentTime
+}
+
+/**
+ * Plays a drum on a kit, now or at a time on the audio clock, and returns the time it plays
+ * at. Call from a user gesture the first time: the first call creates the audio context.
+ */
+export function playDrum(kit: Kit, name: string, at = getOutput().audio.currentTime): number {
   const spec = SPECS[kit]
   if (spec.kind === 'samples') {
     const buffer = sampleBuffers.get(`${kit}/${name}`)
+    // Still loading (or failed): play the synthesised drum meanwhile, never silence.
     if (!buffer) {
-      // Still loading (or failed): play the synthesised drum meanwhile, never silence.
       loadSamples(kit)
-      playDrum('trap', name)
-      return
+      return playDrum('trap', name, at)
     }
     const input = kitInput(kit)
     const { audio } = getOutput()
@@ -368,12 +377,24 @@ export function playDrum(kit: Kit, name: string): void {
     const source = audio.createBufferSource()
     source.buffer = buffer
     source.connect(trimmed(audio, input, spec.levels, name))
-    source.start()
-    return
+    source.start(at)
+    return at
   }
-  const voice = spec.voices[name]
-  if (!voice) return
   const play = playFor(kit, spec)
   void play.audio.resume()
-  voice({ ...play, out: trimmed(play.audio, play.out, spec.levels, name) }, play.audio.currentTime)
+  spec.voices[name]?.({ ...play, out: trimmed(play.audio, play.out, spec.levels, name) }, at)
+  return at
+}
+
+/** A metronome click at `at`, higher on the first beat of a bar. Dry, past the kit. */
+export function playTick(accent: boolean, at: number): void {
+  const { audio } = getOutput()
+  const osc = audio.createOscillator()
+  const gain = audio.createGain()
+  osc.frequency.value = accent ? 1760 : 1320
+  gain.gain.setValueAtTime(accent ? 0.12 : 0.07, at)
+  gain.gain.exponentialRampToValueAtTime(0.001, at + 0.04)
+  osc.connect(gain).connect(audio.destination)
+  osc.start(at)
+  osc.stop(at + 0.05)
 }
