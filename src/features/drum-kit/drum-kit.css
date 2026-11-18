@@ -161,6 +161,39 @@
   }
 }
 
+/* Holding a linked drum draws a hairline ring round its icon over the hold time, like a pen
+   going round once: closed, the link is ready and letting go opens it. Let go early and the
+   ring winds back. It shares the icon's grid cell, so it's centred on it. */
+.icon,
+.hold-ring {
+  grid-area: 1 / 1;
+}
+
+.hold-ring {
+  width: calc(100% * 0.021 * 1.75 / var(--rx));
+  height: auto;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke: currentColor;
+  /* About 1px, the drawing's hairline, at the ring's usual size (viewBox units). */
+  stroke-width: 1.8;
+  /* Start at the top, whatever the drum's own turn. */
+  rotate: calc(-90deg - var(--angle, 0deg));
+}
+
+.hold-ring circle {
+  /* Its circumference (2π × 48): offset by all of it, none is drawn. */
+  stroke-dasharray: 302;
+  stroke-dashoffset: 302;
+  transition: stroke-dashoffset 150ms ease-out;
+}
+
+.piece[data-holding] .hold-ring circle {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--hold) linear;
+}
+
 /* Holding fills the icon in over the hold time; it pops once the link is ready. */
 .piece[data-holding] .icon {
   opacity: 1;
@@ -290,6 +323,11 @@
   .icon {
     width: calc(100% * 0.045 / var(--prx));
     rotate: var(--tilt, 0deg);
+  }
+
+  .hold-ring {
+    width: calc(100% * 0.045 * 1.75 / var(--prx));
+    rotate: -90deg;
   }
 
   .brand {

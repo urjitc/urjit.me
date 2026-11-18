@@ -257,6 +257,13 @@ export function mountDrumKit(
   bellRing.setAttribute('aria-hidden', 'true')
   kit.append(bellRing)
   kit.style.setProperty('--hold', `${HOLD_MS}ms`)
+  // Each linked drum gets a ring that draws itself round its icon while held (drum-kit.css).
+  for (const link of kit.querySelectorAll('a.piece')) {
+    link.insertAdjacentHTML(
+      'beforeend',
+      '<svg class="hold-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" /></svg>',
+    )
+  }
   // Label each drum with its keys (shown only where there's a keyboard, via CSS).
   const keyLabels = new Map<HTMLElement, HTMLElement[]>()
   for (const piece of kit.querySelectorAll<HTMLElement>('.piece')) {
