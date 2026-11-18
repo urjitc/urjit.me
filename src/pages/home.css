@@ -184,6 +184,23 @@ h2 {
   filter: none;
 }
 
+/* Tools: just logo and name, several to a line. */
+.tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 20px;
+}
+
+.tools li + li {
+  margin-top: 0;
+}
+
+.tools .row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* Phones: no room beside the name, so the date moves under the role. */
 @media (max-width: 480px) {
   .row {
