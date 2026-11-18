@@ -92,13 +92,14 @@ a:focus-visible {
 }
 
 /* The hover/focus marker (src/features/row-outline.ts): one hairline outline per list, like
-   the drum drawing's lines, that glides between rows. Quick and front-loaded so it feels snappy. */
+   the drum drawing's lines, that glides between rows. Quick and front-loaded so it feels snappy.
+   Faint on hover; stronger for keyboard focus, where it's the only focus indicator. */
 .rows .row-outline {
   position: absolute;
   top: 0;
   left: 0;
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--fg) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
   border-radius: 6px;
   opacity: 0;
   pointer-events: none;
@@ -111,6 +112,10 @@ a:focus-visible {
 
 .rows .row-outline.shown {
   opacity: 1;
+}
+
+.rows:has(.row:focus-visible) .row-outline {
+  border-color: color-mix(in srgb, var(--fg) 55%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
