@@ -8,5 +8,4 @@ art/*-check.png
 .claude/
 dist-sign/
 art/sign/
-art/signature.json
 __pycache__/

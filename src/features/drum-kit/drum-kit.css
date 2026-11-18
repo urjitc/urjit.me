@@ -16,6 +16,20 @@
   isolation: isolate;
 }
 
+/* The signature covers the drawing (its viewBox is the drawing's), in the page's ink, above
+   the art and below the hit areas. It was signed on the wide kit, so phones held upright,
+   with the U layout, don't show it. */
+.signature {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: visible;
+  color: var(--fg);
+  pointer-events: none;
+}
+
 /* A drawing layer: placed by its box (--x0/--y0/--w/--h) and pivoting at --ox/--oy, all
    fractions. Transform animations on these run on the compositor, without repainting. */
 .part {
@@ -309,6 +323,10 @@
 
   .part[data-layout="portrait"] {
     display: block;
+  }
+
+  .signature {
+    display: none;
   }
 
   .pedal-area {
