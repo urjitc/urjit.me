@@ -9,3 +9,4 @@ art/*-check.png
 dist-sign/
 art/sign/
 art/signature.json
+__pycache__/

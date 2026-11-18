@@ -174,7 +174,8 @@ def main():
 
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob('*.svg'):
-        if not old.name.startswith('face-'):  # the kick's faces come from art/face.py
+        # The kick's faces come from art/face.py, the portrait layers from split_portrait.py.
+        if not old.name.startswith(('face-', 'p-')):
             old.unlink()
     layers = []
     rendered = np.zeros((H, W), bool)

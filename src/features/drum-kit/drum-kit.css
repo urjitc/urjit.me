@@ -238,15 +238,53 @@
 
 /* Upright phones: draw the kit turned 90°, so turning the phone shows it the right way up.
    The box keeps its landscape size; the margins reserve the extra height the turn needs. */
+/* The portrait drawing (art/split_portrait.py: the kit laid out in a U) is for phones held
+   upright; everywhere else it's hidden. */
+.part[data-layout="portrait"] {
+  display: none;
+}
+
+/* Phones held upright swap to the portrait drawing instead of turning the wide kit: its
+   layers show, the wide ones hide, and each piece takes its portrait hit area (--px/--py/
+   --prx/--pry). Icons grow, as the kit is much narrower. */
 @media (orientation: portrait) and (max-width: 700px) {
-  .stage {
-    overflow-x: clip;
+  .kit {
+    width: min(calc(100vw - 32px), calc((100svh - 150px) * 1024 / 1536));
+    aspect-ratio: 1024 / 1536;
   }
 
-  .kit {
-    width: calc((100vw - 32px) * 1536 / 1024);
-    margin-block: calc((100vw - 32px) * 512 / 1024 / 2);
-    rotate: 90deg;
+  .part {
+    display: none;
+  }
+
+  .part[data-layout="portrait"] {
+    display: block;
+  }
+
+  .piece {
+    left: calc((var(--px) - var(--prx)) * 100%);
+    top: calc((var(--py) - var(--pry)) * 100%);
+    width: calc(var(--prx) * 200%);
+    height: calc(var(--pry) * 200%);
+    rotate: 0deg;
+  }
+
+  .icon {
+    width: calc(100% * 0.045 / var(--prx));
+    rotate: var(--tilt, 0deg);
+  }
+
+  .brand {
+    display: none;
+  }
+
+  /* The ride's bell in the portrait drawing: centre 821, 209 of 1024 x 1536, 32 px across. */
+  .bell-ring {
+    left: calc((0.8018 - 0.0313) * 100%);
+    top: calc((0.1361 - 0.0208) * 100%);
+    width: 6.25%;
+    height: 4.17%;
+    rotate: 0deg;
   }
 }
 

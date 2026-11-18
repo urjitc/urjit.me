@@ -43,9 +43,16 @@ FACE_INK = 160
 FEATURES = [(358, 288), (678, 288), (680, 470), (652, 560), (612, 625),
             (420, 625), (378, 560), (355, 470)]
 CHIN_Y = 675  # where the chin is in the face images; the face squashes around it
-# Where the face's square sits on the drawing, in px: its centre x, top y and side. The chin
-# lands on the beater's head at rest, so the beater swings into the face.
-CENTRE_X, TOP, SIDE = 830, 357, 208
+# Each drawing the face goes on: its image, where the face's square sits on it (centre x, top
+# y and side, in px; the chin lands on the beater's head at rest, so the beater swings into
+# the face), a point inside the kick head, the SVG prefix, the index.html markers and the
+# <img> attribute marking the layout.
+LAYOUTS = [
+    dict(source=SOURCE, centre_x=830, top=357, side=208, inside=(400, 830),
+         prefix='face-', markers='kick-face', attr=''),
+    dict(source=ROOT / 'art' / 'drum-kit-portrait.png', centre_x=486, top=1012, side=290,
+         inside=(1080, 486), prefix='face-p-', markers='kick-face-portrait', attr=' data-layout="portrait"'),
+]
 SCALE = 4  # trace at 4x the drawing's resolution so thin lines stay smooth
 # Thicken lines (max filter size, at SCALE) so they match the drum's ~2 px strokes.
 THICKEN = 3
@@ -53,13 +60,12 @@ THICKEN = 3
 MARGIN = 4
 
 
-def visible_head(gray):
-    """The kick head's blank area: everything reachable from its centre without crossing ink."""
+def visible_head(gray, start):
+    """The kick head's blank area: everything reachable from `start` without crossing ink."""
     ink = Image.fromarray(np.where(gray < INK, 255, 0).astype(np.uint8))
     walls = np.array(ink.filter(ImageFilter.MaxFilter(2 * MARGIN + 1))) > 0
     H, W = walls.shape
     seen = np.zeros_like(walls)
-    start = (400, CENTRE_X)
     queue = deque([start])
     seen[start] = True
     while queue:
@@ -106,15 +112,6 @@ def align(moving, fixed, features):
 
 
 def main():
-    gray = np.array(Image.open(SOURCE).convert('L'))
-    H, W = gray.shape
-    # The layer's box: SIDE wide, and taller by PAD's share so its top clears the hair.
-    tall = SIDE * (SIZE + PAD) // SIZE
-    x0, y0 = CENTRE_X - SIDE // 2, TOP - (tall - SIDE)
-    big_w, big_h = SIDE * SCALE, tall * SCALE
-    head = visible_head(gray)[y0:y0 + tall, x0:x0 + SIDE]
-    mask = np.array(Image.fromarray(head).resize((big_w, big_h), Image.NEAREST))
-
     region_image = Image.new('1', (SIZE, SIZE + PAD))
     ImageDraw.Draw(region_image).polygon([(x, y + PAD) for x, y in FEATURES], fill=1)
     features = np.array(region_image)
@@ -133,41 +130,60 @@ def main():
     for name in FACES:
         ink = neutral if name == 'neutral' else load(name)
         if name != 'neutral':
-            ink, shift = align(ink, neutral, features)
-            print(f'{name}: shifted {shift} to match the neutral hair')
+            ink, offset = align(ink, neutral, features)
+            print(f'{name}: shifted {offset} to match the neutral hair')
         # Only above the chin: below it, the shirt lines of a shifted face would show double.
         extras = ink & ~silhouette & above_chin if name != 'neutral' else blank
         layers[name] = (ink & features, extras)
 
-    check = np.stack([np.where(gray < INK, 0, 255)] * 3, -1).astype(np.uint8)
+    html = HTML.read_text()
+    for layout in LAYOUTS:
+        html = place(layers, layout, html)
+    HTML.write_text(html)
+
+
+def place(layers, layout, html):
+    """Draws the face layers onto one drawing's kick head; returns index.html with their <img>s."""
+    gray = np.array(Image.open(layout['source']).convert('L'))
+    H, W = gray.shape
+    side = layout['side']
+    # The layer's box: `side` wide, and taller by PAD's share so its top clears the hair.
+    tall = side * (SIZE + PAD) // SIZE
+    x0, y0 = layout['centre_x'] - side // 2, layout['top'] - (tall - side)
+    big_w, big_h = side * SCALE, tall * SCALE
+    head = visible_head(gray, layout['inside'])[y0:y0 + tall, x0:x0 + side]
+    mask = np.array(Image.fromarray(head).resize((big_w, big_h), Image.NEAREST))
+
     def draw(ink):
         scaled = Image.fromarray(ink).convert('L').resize((big_w, big_h), Image.LANCZOS)
         return np.array(scaled.filter(ImageFilter.MaxFilter(THICKEN))) > 60
 
+    check = np.stack([np.where(gray < INK, 0, 255)] * 3, -1).astype(np.uint8)
+    prefix = layout['prefix']
     for name, (lines, extras) in layers.items():
         drawn = (draw(lines) & mask) | draw(extras)
         svg = potrace(np.where(drawn, 0, 255).astype(np.uint8))
         svg = re.sub(r'<\?xml.*?\?>\s*|<!DOCTYPE.*?>\s*|<metadata>.*?</metadata>\s*', '', svg, flags=re.S)
         svg = re.sub(r'width="[^"]*" height="[^"]*" viewBox="[^"]*"', f'viewBox="0 0 {big_w} {big_h}"', svg)
         svg = svg.replace('fill="#000000"', 'fill="#fff"')
-        (OUT / f'face-{name}.svg').write_text(svg)
-        print(f'face-{name}  {len(svg) / 1024:.1f} KB')
+        (OUT / f'{prefix}{name}.svg').write_text(svg)
+        print(f'{prefix}{name}  {len(svg) / 1024:.1f} KB')
         if name in ('base', 'neutral'):
-            small = np.array(Image.fromarray(drawn).resize((SIDE, tall), Image.BOX)) > 0
-            check[y0:y0 + tall, x0:x0 + SIDE][small] = (200, 20, 30)
-    Image.fromarray(check).save(ROOT / 'art' / 'face-check.png')
+            small = np.array(Image.fromarray(drawn).resize((side, tall), Image.BOX)) > 0
+            check[y0:y0 + tall, x0:x0 + side][small] = (200, 20, 30)
+    Image.fromarray(check).save(ROOT / 'art' / f'{prefix}check.png')
 
-    style = (f'--x0: {x0 / W:.5f}; --y0: {y0 / H:.5f}; --w: {SIDE / W:.5f}; --h: {tall / H:.5f}; '
+    style = (f'--x0: {x0 / W:.5f}; --y0: {y0 / H:.5f}; --w: {side / W:.5f}; --h: {tall / H:.5f}; '
              f'--ox: 0.5; --oy: {(CHIN_Y + PAD) / (SIZE + PAD):.3f}')
     block = '\n'.join(
-        f'          <img class="part face" data-face="{name}" src="/src/features/drum-kit/art/face-{name}.svg" '
-        f'alt="" style="{style}" />' for name in layers)
-    html = HTML.read_text()
-    html, count = re.subn(r'(<!-- kick-face:start -->\n).*?([ \t]*<!-- kick-face:end -->)',
+        f'          <img class="part face"{layout["attr"]} data-face="{name}" '
+        f'src="/src/features/drum-kit/art/{prefix}{name}.svg" alt="" style="{style}" />' for name in layers)
+    markers = layout['markers']
+    html, count = re.subn(rf'(<!-- {markers}:start -->\n).*?([ \t]*<!-- {markers}:end -->)',
                           lambda m: m.group(1) + block + '\n' + m.group(2), html, flags=re.S)
     if count != 1:
-        sys.exit('kick-face markers not found in index.html')
-    HTML.write_text(html)
+        sys.exit(f'{markers} markers not found in index.html')
+    return html
 
 
 if __name__ == '__main__':

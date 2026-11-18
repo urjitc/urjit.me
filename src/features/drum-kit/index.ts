@@ -124,6 +124,25 @@ const FACE_HIT: Keyframe[] = [
   { scale: '1 1' },
 ]
 
+/** Groups elements by a key (a part or face name); elements without one are left out. */
+function groupBy(elements: Iterable<HTMLElement>, key: (element: HTMLElement) => string | undefined) {
+  const groups = new Map<string, HTMLElement[]>()
+  for (const element of elements) {
+    const name = key(element)
+    if (name) groups.set(name, [...(groups.get(name) ?? []), element])
+  }
+  return groups
+}
+
+/** Plays the same animation on every element given (a part's copy in each drawing). */
+function animateAll(
+  elements: readonly HTMLElement[] | undefined,
+  keyframes: Keyframe[],
+  timing: number | KeyframeAnimationOptions,
+): void {
+  for (const element of elements ?? []) element.animate(keyframes, timing)
+}
+
 /**
  * Sets each drum's key labels on an arc just inside its rim, each turned to follow the
  * curve and spaced by its real width. They sit at the bottom of the drum on screen unless
@@ -175,19 +194,19 @@ export function mountDrumKit(
   kitSwitch: HTMLElement,
 ): void {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
-  // The drawing's moving layers, by name: each drum's sound, plus the pedal's two parts.
-  const parts = new Map(
-    Array.from(kit.querySelectorAll<HTMLElement>('.part'), (part) => [part.dataset.part, part]),
-  )
-  // The kick's face: its shared base, its features at rest, and its reactions to a hit.
+  // The drawings' moving layers, by name (each drum's sound, plus the pedal's two parts):
+  // one per drawing, wide and portrait, moved together; only the one on screen shows.
+  const parts = groupBy(kit.querySelectorAll<HTMLElement>('.part'), (part) => part.dataset.part)
+  // The kick's face, in each drawing: its shared base, its features at rest, and reactions.
   const faces = Array.from(kit.querySelectorAll<HTMLElement>('.face'))
-  const baseFace = faces.find((face) => face.dataset.face === 'base')
-  const restFace = faces.find((face) => face.dataset.face === 'neutral')
-  const laughFace = faces.find((face) => face.dataset.face === 'laugh')
-  const reactions = faces.filter((face) => face !== baseFace && face !== restFace && face !== laughFace)
+  const byFace = groupBy(faces, (face) => face.dataset.face)
+  const baseFaces = byFace.get('base') ?? []
+  const restFaces = byFace.get('neutral') ?? []
+  const laughFaces = byFace.get('laugh') ?? []
+  const reactions = [...byFace.keys()].filter((name) => !['base', 'neutral', 'laugh'].includes(name))
   // The last few hits (sound, time), to spot a ba-dum-tss.
   let recent: { sound: string; at: number }[] = []
-  let lastReaction: HTMLElement | undefined
+  let lastReaction: string | undefined
   // Key labels that sit on a moving part, by the part's name.
   const riders = new Map<string, HTMLElement>()
   // Each key's label, by key code, to flash it when that key is played.
@@ -217,7 +236,7 @@ export function mountDrumKit(
     // A drum can put its keys on a part of the drawing instead (the kick, on its pedal),
     // where they ride along with that part.
     const hostName = piece.dataset.keysOn
-    const host = hostName && parts.get(hostName)
+    const host = hostName && parts.get(hostName)?.[0]
     if (hostName && host) {
       keys.classList.add('on-part')
       keys.style.cssText = host.style.cssText
@@ -263,28 +282,27 @@ export function mountDrumKit(
 
   /** Crossfades the kick's face to a reaction as the beater lands, squashing it as it goes. */
   function flinch(): void {
-    if (!baseFace || !restFace) return
     // A kick on the "tss" mustn't cut the laugh short.
-    if (laughFace?.getAnimations().length) return
+    if (laughFaces.some((face) => face.getAnimations().length)) return
     for (const face of faces) for (const animation of face.getAnimations()) animation.cancel()
-    const choices = reactions.filter((face) => face !== lastReaction)
+    const choices = reactions.filter((name) => name !== lastReaction)
     const reaction = choices[Math.floor(Math.random() * choices.length)]
     if (!reaction) return
     lastReaction = reaction
+    const reacting = byFace.get(reaction) ?? []
     const timing = { duration: FACE_MS, delay: PEDAL_MS * PEDAL_IMPACT }
-    restFace.animate(FACE_OUT, timing)
-    reaction.animate(FACE_IN, timing)
-    for (const face of [baseFace, restFace, reaction]) face.animate(FACE_HIT, timing)
+    animateAll(restFaces, FACE_OUT, timing)
+    animateAll(reacting, FACE_IN, timing)
+    animateAll([...baseFaces, ...restFaces, ...reacting], FACE_HIT, timing)
   }
 
   /** The face laughs: its features crossfade to the laugh, and the head shakes. */
   function laugh(): void {
-    if (!baseFace || !restFace || !laughFace) return
     for (const face of faces) for (const animation of face.getAnimations()) animation.cancel()
-    restFace.animate(FACE_OUT, LAUGH_MS)
-    laughFace.animate(FACE_IN, LAUGH_MS)
+    animateAll(restFaces, FACE_OUT, LAUGH_MS)
+    animateAll(laughFaces, FACE_IN, LAUGH_MS)
     if (reducedMotion.matches) return
-    for (const face of [baseFace, restFace, laughFace]) face.animate(LAUGH_SHAKE, { duration: LAUGH_MS, easing: 'ease-out' })
+    animateAll([...baseFaces, ...restFaces, ...laughFaces], LAUGH_SHAKE, { duration: LAUGH_MS, easing: 'ease-out' })
   }
 
   /** Keeps the last three non-kick hits and laughs when they make a ba-dum-tss. */
@@ -307,7 +325,7 @@ export function mountDrumKit(
     if (sound) listen(sound)
     if (reducedMotion.matches) return
     if (sound === 'bell') {
-      parts.get('ride')?.animate(BELL_HIT, 260)
+      animateAll(parts.get('ride'), BELL_HIT, 260)
       bellRing.animate(BELL_RING, { duration: 650, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' })
       return
     }
@@ -318,10 +336,10 @@ export function mountDrumKit(
     const isKick = piece.dataset.sound === 'kick'
     const headTiming = { ...timing, delay: isKick ? PEDAL_MS * PEDAL_IMPACT : 0 }
     piece.animate(keyframes, headTiming)
-    parts.get(piece.dataset.sound)?.animate(keyframes, headTiming)
+    animateAll(parts.get(piece.dataset.sound ?? ''), keyframes, headTiming)
     if (isKick) {
       for (const [name, keyframes] of [['beater', BEATER_HIT], ['footboard', FOOTBOARD_HIT]] as const) {
-        parts.get(name)?.animate(keyframes, PEDAL_MS)
+        animateAll(parts.get(name), keyframes, PEDAL_MS)
         riders.get(name)?.animate(keyframes, PEDAL_MS)
       }
       flinch()
