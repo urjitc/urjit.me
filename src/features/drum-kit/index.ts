@@ -105,7 +105,11 @@ const FOOTBOARD_HIT: Keyframe[] = [
 // The face on the kick head flinches when the beater lands: it squashes toward the chin and
 // springs back, while a random reaction's features (never the same twice running) crossfade
 // in over the resting ones and back out over FACE_MS. The hair and outline never change.
+// Kicked again mid-reaction, the face re-squashes from where it is and the showing reaction
+// fades out over FACE_SWAP_MS as the next fades in, so rapid kicks flow from face to face.
 const FACE_MS = 600
+const FACE_SWAP_MS = 90
+const FACE_AWAY: Keyframe[] = [{ opacity: 1 }, { opacity: 0 }]
 const FACE_IN: Keyframe[] = [
   { opacity: 0 },
   { opacity: 1, offset: 0.08 },
@@ -136,13 +140,36 @@ function groupBy(elements: Iterable<HTMLElement>, key: (element: HTMLElement) =>
   return groups
 }
 
-/** Plays the same animation on every element given (a part's copy in each drawing). */
+/**
+ * Plays the same animation on every element given (a part's copy in each drawing), from
+ * wherever each one is now: a running animation of the same properties is cancelled and the
+ * new one starts from its current on-screen values (held through any delay). So hits in
+ * quick succession re-strike mid-motion instead of snapping back to rest first.
+ */
 function animateAll(
   elements: readonly HTMLElement[] | undefined,
   keyframes: Keyframe[],
   timing: number | KeyframeAnimationOptions,
 ): void {
-  for (const element of elements ?? []) element.animate(keyframes, timing)
+  const props = [...new Set(keyframes.flatMap(Object.keys))].filter(
+    (key) => !['offset', 'easing', 'composite'].includes(key),
+  )
+  const options = typeof timing === 'number' ? { duration: timing } : timing
+  // Read every current value before cancelling anything, so styles are computed once.
+  const plans = (elements ?? []).map((element) => {
+    const running = element
+      .getAnimations()
+      .filter((animation) => animation.effect instanceof KeyframeEffect &&
+        animation.effect.getKeyframes().some((frame) => props.some((prop) => prop in frame)))
+    if (!running.length) return { element, running, first: keyframes[0] }
+    const style = getComputedStyle(element)
+    const now = Object.fromEntries(props.map((prop) => [prop, style.getPropertyValue(prop)]))
+    return { element, running, first: { ...keyframes[0], ...now } }
+  })
+  for (const { element, running, first } of plans) {
+    for (const animation of running) animation.cancel()
+    element.animate([first ?? {}, ...keyframes.slice(1)], { ...options, fill: 'backwards' })
+  }
 }
 
 /**
@@ -289,21 +316,29 @@ export function mountDrumKit(
   function flinch(): void {
     // A kick on the "tss" mustn't cut the laugh short.
     if (laughFaces.some((face) => face.getAnimations().length)) return
-    for (const face of faces) for (const animation of face.getAnimations()) animation.cancel()
     const choices = reactions.filter((name) => name !== lastReaction)
     const reaction = choices[Math.floor(Math.random() * choices.length)]
     if (!reaction) return
     lastReaction = reaction
     const reacting = byFace.get(reaction) ?? []
     const timing = { duration: FACE_MS, delay: PEDAL_MS * PEDAL_IMPACT }
+    fadeAllBut(reaction, { duration: FACE_SWAP_MS, delay: timing.delay })
     animateAll(restFaces, FACE_OUT, timing)
     animateAll(reacting, FACE_IN, timing)
     animateAll([...baseFaces, ...restFaces, ...reacting], FACE_HIT, timing)
   }
 
+  /** Fades out any reaction still showing from an earlier kick, other than `keep`. */
+  function fadeAllBut(keep: string, timing: number | KeyframeAnimationOptions): void {
+    const showing = faces.filter(
+      ({ dataset: { face } }) => face !== keep && face !== 'base' && face !== 'neutral',
+    ).filter((face) => face.getAnimations().length)
+    animateAll(showing, FACE_AWAY, timing)
+  }
+
   /** The face laughs: its features crossfade to the laugh, and the head shakes. */
   function laugh(): void {
-    for (const face of faces) for (const animation of face.getAnimations()) animation.cancel()
+    fadeAllBut('laugh', FACE_SWAP_MS)
     animateAll(restFaces, FACE_OUT, LAUGH_MS)
     animateAll(laughFaces, FACE_IN, LAUGH_MS)
     if (reducedMotion.matches) return
@@ -340,12 +375,13 @@ export function mountDrumKit(
     // The kick head waits for the beater to land on it.
     const isKick = piece.dataset.sound === 'kick'
     const headTiming = { ...timing, delay: isKick ? PEDAL_MS * PEDAL_IMPACT : 0 }
-    piece.animate(keyframes, headTiming)
+    animateAll([piece], keyframes, headTiming)
     animateAll(parts.get(piece.dataset.sound ?? ''), keyframes, headTiming)
     if (isKick) {
       for (const [name, keyframes] of [['beater', BEATER_HIT], ['footboard', FOOTBOARD_HIT]] as const) {
         animateAll(parts.get(name), keyframes, PEDAL_MS)
-        riders.get(name)?.animate(keyframes, PEDAL_MS)
+        const rider = riders.get(name)
+        if (rider) animateAll([rider], keyframes, PEDAL_MS)
       }
       flinch()
     }
