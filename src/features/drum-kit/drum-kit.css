@@ -1,0 +1,378 @@
+/* The kit is a static base image plus one image per moving part (made by art/split.py),
+   each animated as its own layer. Each .piece is a drum's transparent hit area and icon,
+   placed by
+   --x/--y/--rx/--ry (fractions of the kit); --angle tilts it (cymbals are drawn as
+   tilted ovals), --depth is the shell below the head and --tilt the icon's angle. */
+.kit {
+  position: relative;
+  width: min(calc(100vw - 32px), 880px, calc((100svh - 88px) * 1536 / 1024));
+  aspect-ratio: 1536 / 1024;
+  margin-left: 50%;
+  translate: -50% 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  /* Keep the part/piece z-indexes inside the kit, so content below can sit above it. */
+  isolation: isolate;
+}
+
+/* A drawing layer: placed by its box (--x0/--y0/--w/--h) and pivoting at --ox/--oy, all
+   fractions. Transform animations on these run on the compositor, without repainting. */
+.part {
+  position: absolute;
+  z-index: 1;
+  left: calc(var(--x0) * 100%);
+  top: calc(var(--y0) * 100%);
+  width: calc(var(--w) * 100%);
+  height: calc(var(--h) * 100%);
+  transform-origin: calc(var(--ox, 0.5) * 100%) calc(var(--oy, 0.5) * 100%);
+  pointer-events: none;
+  filter: var(--art-filter);
+}
+
+/* The maker's name, set along the bass drum's far hoop in the drawing's coordinates. Only
+   the word itself takes the pointer. */
+.brand {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.brand svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.brand text {
+  pointer-events: auto;
+  fill: var(--muted);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  transition: fill 150ms;
+}
+
+.brand:focus-visible text {
+  fill: var(--fg);
+  outline: none;
+}
+
+@media (hover: hover) {
+  .brand:hover text {
+    fill: var(--fg);
+  }
+}
+
+/* The ride's bell (measured from the drawing: centre 1314, 229 of 1536 x 1024, about 48 x 46
+   px), tilted with the cymbal. A hidden key rings it; the outline ripples out and fades. */
+.bell-ring {
+  position: absolute;
+  z-index: 2;
+  left: calc((0.8555 - 0.0313) * 100%);
+  top: calc((0.2236 - 0.0449) * 100%);
+  width: 6.25%;
+  height: 8.98%;
+  border: 1px solid var(--fg);
+  border-radius: 50%;
+  rotate: -15.5deg;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The kick's face (art/face.py): the shared base (hair, outline, neck, shirt) and the
+   features at rest show until a hit crossfades a reaction's features in. */
+.face:not([data-face="base"], [data-face="neutral"]) {
+  opacity: 0;
+}
+
+.piece {
+  position: absolute;
+  z-index: 2;
+  left: calc((var(--x) - var(--rx)) * 100%);
+  top: calc((var(--y) - var(--ry)) * 100%);
+  width: calc(var(--rx) * 200%);
+  height: calc(var(--ry) * 200%);
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  rotate: var(--angle, 0deg);
+}
+
+.piece:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* Every icon is the same size on screen, whatever its drum's size: 2.1% of the kit's
+   width (about a quarter of a rack tom), set against this drum's --rx. */
+.icon {
+  width: calc(100% * 0.021 / var(--rx));
+  height: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+  rotate: calc(var(--tilt, 0deg) - var(--angle, 0deg));
+  transition:
+    opacity 150ms,
+    scale 150ms;
+}
+
+.icon path {
+  /* Keep the line as thin as the drawing's at any icon size. */
+  vector-effect: non-scaling-stroke;
+}
+
+.piece:focus-visible .icon {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .piece:hover .icon {
+    opacity: 1;
+  }
+}
+
+/* Holding fills the icon in over the hold time; it pops once the link is ready. */
+.piece[data-holding] .icon {
+  opacity: 1;
+  scale: 1.15;
+  transition:
+    opacity var(--hold) linear,
+    scale var(--hold) linear;
+}
+
+
+.piece[data-ready] .icon {
+  scale: 1.3;
+  transition: scale 120ms ease-out;
+}
+
+/* Each drum's keys sit on its head along an arc (placed by index.ts), drawn in the kit's
+   own hairline. Only where there's a keyboard: a fine pointer with hover, wide screen. */
+.keys {
+  position: absolute;
+  inset: 0;
+  display: none;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Keys set on a part of the drawing (via data-keys-on), turned to run along it. */
+.keys.on-part {
+  inset: auto;
+  z-index: 2;
+  /* Pivots with its part (see .part), so it moves with it. */
+  transform-origin: calc(var(--ox, 0.5) * 100%) calc(var(--oy, 0.5) * 100%);
+  left: calc(var(--x0) * 100%);
+  top: calc(var(--y0) * 100%);
+  width: calc(var(--w) * 100%);
+  height: calc(var(--h) * 100%);
+}
+
+.keys.on-part kbd {
+  left: 50%;
+  top: 33%;
+  rotate: -90deg;
+}
+
+.keys kbd {
+  position: absolute;
+  translate: -50% -50%;
+  min-width: 16px;
+  padding: 2px 4px;
+  border: 1px solid color-mix(in srgb, var(--fg) 85%, transparent);
+  border-radius: 3px;
+  /* Muted, not faded: 4.8:1 on the red, past WCAG AA for text. */
+  color: var(--muted);
+  font: inherit;
+  text-align: center;
+}
+
+/* A drum's keys light up while it's pointed at (the kick's sit on its pedal), and each
+   key flashes as it's played (.struck, set from index.ts). */
+.keys kbd {
+  transition:
+    color 120ms,
+    border-color 120ms,
+    background-color 120ms;
+}
+
+@media (hover: hover) {
+  .piece:hover .keys kbd,
+  .kit:has([data-sound="kick"]:hover) .keys.on-part kbd {
+    border-color: var(--fg);
+    color: var(--fg);
+  }
+}
+
+.keys kbd.struck {
+  background: var(--fg);
+  color: var(--bg);
+  transition: none;
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 701px) {
+  .keys {
+    display: flex;
+  }
+}
+
+/* Upright phones: draw the kit turned 90°, so turning the phone shows it the right way up.
+   The box keeps its landscape size; the margins reserve the extra height the turn needs. */
+@media (orientation: portrait) and (max-width: 700px) {
+  .stage {
+    overflow-x: clip;
+  }
+
+  .kit {
+    width: calc((100vw - 32px) * 1536 / 1024);
+    margin-block: calc((100vw - 32px) * 512 / 1024 / 2);
+    rotate: 90deg;
+  }
+}
+
+
+.controls {
+  /* Above the kit's box, which the controls overlap when tucked up into its empty strip. */
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 14px;
+  margin-top: 12px;
+}
+
+.kit-switch {
+  position: relative;
+  display: flex;
+  gap: 2px;
+}
+
+/* The chosen option's outline (src/features/choice-outline.ts): the same hairline and
+   corners as the lists' row outline, gliding to each new choice. */
+.choice-outline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px solid color-mix(in srgb, var(--fg) 85%, transparent);
+  border-radius: 6px;
+  pointer-events: none;
+  transition:
+    translate 140ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    width 140ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    height 140ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .choice-outline {
+    transition: none;
+  }
+}
+
+/* Hairline pipes between the kit, theme and sound controls; dropped once the row wraps. */
+.divider {
+  width: 1px;
+  height: 14px;
+  background: color-mix(in srgb, var(--fg) 35%, transparent);
+}
+
+@media (max-width: 520px) {
+  .divider {
+    display: none;
+  }
+}
+
+/* The drawing ends ~7% above its box (the lowest stand foot), so tuck the controls up
+   into that empty strip when the kit isn't turned sideways. */
+@media (orientation: landscape), (min-width: 701px) {
+  .controls {
+    margin-top: -28px;
+  }
+}
+
+.kit-switch button,
+.sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 3px 11px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* The chosen kit is circled in hairline, like a pen mark. */
+.kit-switch button[aria-pressed="true"] {
+  color: var(--fg);
+  /* Already chosen: no underline or pointer suggesting a click would do something. */
+  cursor: default;
+}
+
+.sound-toggle {
+  color: var(--fg);
+}
+
+.sound-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sound-toggle path {
+  vector-effect: non-scaling-stroke;
+}
+
+.sound-toggle[aria-pressed="false"] .waves,
+.sound-toggle[aria-pressed="true"] .mute {
+  display: none;
+}
+
+.kit-switch button,
+.sound-toggle {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.kit-switch button:not([aria-pressed="true"]):focus-visible,
+.sound-toggle:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .kit-switch button:not([aria-pressed="true"]):hover,
+  .sound-toggle:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}

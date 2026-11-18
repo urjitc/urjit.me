@@ -1,10 +1,15 @@
 import { requireElement } from '../lib/dom'
-import { mountCopyOnClick } from '../lib/copy-on-click'
-import { mountAsciiDrum } from '../features/ascii-drum'
-import '../styles/base.css'
-import './home.css'
+import { mountDrumKit } from '../features/drum-kit'
+import { mountChoiceOutline } from '../features/choice-outline'
+import { mountRowOutline } from '../features/row-outline'
+import { mountThemeSwitch } from '../features/theme'
 
-const canvas = requireElement('ascii-canvas', HTMLCanvasElement)
+mountDrumKit(
+  requireElement('kit', HTMLDivElement),
+  requireElement('sound-toggle', HTMLButtonElement),
+  requireElement('kit-switch', HTMLDivElement),
+)
 
-mountCopyOnClick(requireElement('copy-email', HTMLButtonElement))
-void mountAsciiDrum({ canvas })
+for (const list of document.querySelectorAll<HTMLElement>('.rows')) mountRowOutline(list)
+mountThemeSwitch(requireElement('theme-switch', HTMLDivElement))
+for (const id of ['kit-switch', 'theme-switch']) mountChoiceOutline(requireElement(id, HTMLDivElement))

@@ -1,16 +1,30 @@
-import { resolve } from 'node:path'
-import { defineConfig } from 'vite'
+import { readFile, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
+import { defineConfig, type Plugin } from 'vite'
+import { toMarkdown } from './build/agent-markdown'
+
+/** After a build, writes the homepage as Markdown for agents: dist/index.md and dist/llms.txt. */
+function agentMarkdown(): Plugin {
+  let outDir = 'dist'
+  return {
+    name: 'agent-markdown',
+    apply: 'build',
+    configResolved(config) {
+      outDir = resolve(config.root, config.build.outDir)
+    },
+    async closeBundle() {
+      const markdown = toMarkdown(await readFile(join(outDir, 'index.html'), 'utf8'))
+      await Promise.all(['index.md', 'llms.txt'].map((name) => writeFile(join(outDir, name), markdown)))
+    },
+  }
+}
 
 export default defineConfig({
-  appType: 'mpa',
+  plugins: [agentMarkdown()],
+  // Agent worktrees live in .claude/; their edits shouldn't reload this server's pages.
+  server: { watch: { ignored: ['**/.claude/**'] } },
   build: {
     cssCodeSplit: false,
     modulePreload: { polyfill: false },
-    rolldownOptions: {
-      input: {
-        home: resolve(__dirname, 'index.html'),
-        work: resolve(__dirname, 'work/index.html'),
-      },
-    },
   },
 })

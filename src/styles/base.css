@@ -1,15 +1,29 @@
+@import "@fontsource-variable/jost";
+
+/* Arial resized to Jost's width and line metrics (measured on this page's own text), so
+   nothing reflows when Jost swaps in. */
 @font-face {
-  font-family: "Paper Mono";
-  src: url("./fonts/PaperMono-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
+  font-family: "Jost fallback";
+  src: local("Arial");
+  size-adjust: 91.67%;
+  ascent-override: 116.73%;
+  descent-override: 40.91%;
+  line-gap-override: 0%;
 }
 
+/* Themes: the colours everything is drawn in. Red is the default; Light and Dark are for
+   anyone who finds the red hard to read (chosen in the controls, src/features/theme.ts).
+   Muted text is 88% of the text colour: about 4.8:1 on the red, past WCAG AA's 4.5:1. */
 :root {
-  color: #fff;
-  background: #c90b1a;
-  font-family: "Paper Mono", ui-monospace, Menlo, Monaco, monospace;
+  --bg: #c90b1a;
+  --fg: #fff;
+  --muted: color-mix(in srgb, var(--fg) 88%, var(--bg));
+  /* The drawings and logos are white images; Light turns them black. */
+  --art-filter: none;
+  color: var(--fg);
+  background: var(--bg);
+  font-family: "Jost Variable", "Jost fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-weight: 300;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -21,22 +35,89 @@
   box-sizing: border-box;
 }
 
+:root[data-theme="light"] {
+  --bg: #faf9f6;
+  --fg: #161616;
+  --art-filter: invert(1);
+}
+
+:root[data-theme="dark"] {
+  --bg: #121212;
+  --fg: #f2f2f0;
+}
+
+/* Windows contrast themes pick their own colours; keep the white drawings visible on a
+   light system background. */
+@media (forced-colors: active) {
+  :root {
+    --bg: Canvas;
+    --fg: CanvasText;
+  }
+}
+
+@media (forced-colors: active) and (prefers-color-scheme: light) {
+  :root {
+    --art-filter: invert(1);
+  }
+}
+
 html,
 body {
   width: 100%;
   min-width: 320px;
-  height: 100%;
   margin: 0;
 }
 
-.sr-only {
+::selection {
+  color: var(--bg);
+  background: var(--fg);
+}
+
+/* Content blurs and fades into the red as it scrolls under the screen's top and bottom
+   edges (after paco.me). The top one only appears once the page has scrolled, so it never
+   softens the drum kit at rest. */
+.edge-blur {
+  position: fixed;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  height: 40px;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  -webkit-mask-image: linear-gradient(var(--toward), #000 25%, transparent);
+  mask-image: linear-gradient(var(--toward), #000 25%, transparent);
+}
+
+.edge-blur::after {
+  content: "";
   position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: pre;
-  border: 0;
+  inset: 0;
+  background: linear-gradient(var(--toward), var(--bg), transparent);
+  opacity: 0.5;
+}
+
+.edge-top {
+  --toward: to bottom;
+  top: 0;
+  opacity: 0;
+}
+
+.edge-bottom {
+  --toward: to top;
+  bottom: 0;
+}
+
+@supports (animation-timeline: scroll()) {
+  .edge-top {
+    animation: edge-in linear both;
+    animation-timeline: scroll();
+    animation-range: 0 120px;
+  }
+}
+
+@keyframes edge-in {
+  to {
+    opacity: 1;
+  }
 }

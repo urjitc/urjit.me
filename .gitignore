@@ -4,3 +4,8 @@ dist/
 .DS_Store
 *.log
 .dev.vars
+art/*-check.png
+.claude/
+dist-sign/
+art/sign/
+art/signature.json

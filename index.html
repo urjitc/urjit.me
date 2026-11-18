@@ -5,102 +5,239 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Urjit Chakraborty</title>
     <meta name="author" content="Urjit Chakraborty" />
+    <meta name="description" content="CS at the University of Maryland, College Park. Co-founder of Rudimint." />
     <meta name="theme-color" content="#c90b1a" />
+    <script>
+      // Apply a saved theme before the first paint, so the red never flashes (src/features/theme.ts).
+      try {
+        const theme = localStorage.getItem('theme') ?? (matchMedia('(prefers-contrast: more)').matches ? 'dark' : null)
+        if (theme) document.documentElement.dataset.theme = theme
+      } catch {}
+    </script>
     <meta name="color-scheme" content="light" />
     <link rel="canonical" href="https://urjit.me/" />
 
-    <script type="speculationrules">
-      {
-        "prerender": [{ "urls": ["/work/"], "eagerness": "immediate" }]
-      }
-    </script>
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Urjit" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://urjit.me/" />
     <meta property="og:title" content="Urjit Chakraborty" />
+    <meta property="og:description" content="CS at the University of Maryland, College Park. Co-founder of Rudimint." />
     <meta property="og:image" content="https://urjit.me/og.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Urjit — urjit.me" />
+    <meta property="og:image:alt" content="Urjit Chakraborty" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@urjit_" />
     <meta name="twitter:creator" content="@urjit_" />
     <meta name="twitter:title" content="Urjit Chakraborty" />
+    <meta name="twitter:description" content="CS at the University of Maryland, College Park. Co-founder of Rudimint." />
     <meta name="twitter:image" content="https://urjit.me/og.png" />
-    <meta name="twitter:image:alt" content="Urjit — urjit.me" />
+    <meta name="twitter:image:alt" content="Urjit Chakraborty" />
 
+    <!-- Linked here, not imported from JS, so they block the first paint: otherwise the
+         page renders unstyled for a moment (drum images at their natural size). -->
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/pages/home.css" />
+    <link rel="stylesheet" href="/src/features/drum-kit/drum-kit.css" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <style>
-      html,
-      body {
-        margin: 0;
-        background: #c90b1a;
-        color: #fff;
-      }
-    </style>
 
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Person",
         "name": "Urjit Chakraborty",
+        "description": "CS student at the University of Maryland, College Park, and co-founder of Rudimint.",
         "url": "https://urjit.me/",
-        "email": "chakrabortyurjit@gmail.com",
+        "email": "urjitc@gmail.com",
         "sameAs": [
           "https://github.com/urjitc",
           "https://www.linkedin.com/in/urjitc",
           "https://x.com/urjit_"
         ],
-        "jobTitle": "Cofounder",
+        "jobTitle": "Co-Founder",
         "worksFor": {
           "@type": "Organization",
-          "name": "ThinkEx",
-          "url": "https://thinkex.app"
+          "name": "Rudimint",
+          "url": "https://rudimint.com"
         }
       }
     </script>
   </head>
-  <body class="page-home">
+  <body>
+    <!-- Soft blurred edges where content scrolls under the top and bottom of the screen. -->
+    <div class="edge-blur edge-top" aria-hidden="true"></div>
+    <div class="edge-blur edge-bottom" aria-hidden="true"></div>
     <main>
-      <section class="hero" id="top" aria-label="Urjit Chakraborty">
-        <div class="identity">
-          <h1>Urjit Chakraborty</h1>
-          <nav aria-label="Primary navigation">
-            <a href="/work/">&gt; Work</a>
-            <button
-              type="button"
-              id="copy-email"
-              data-copy="chakrabortyurjit@gmail.com"
-              aria-live="polite"
-            >
-              &gt; Email
-            </button>
-            <a href="https://github.com/urjitc" target="_blank" rel="noopener noreferrer"
-              >&gt; GitHub</a
-            >
-            <a
-              href="https://www.linkedin.com/in/urjitc"
-              target="_blank"
-              rel="noopener noreferrer"
-              >&gt; LinkedIn</a
-            >
-            <a href="https://x.com/urjit_" target="_blank" rel="noopener noreferrer"
-              >&gt; X</a
-            >
-          </nav>
+      <section class="stage" aria-label="Drum kit">
+        <div class="kit" id="kit" role="group" aria-label="Drum kit. Tap a drum to play it. Hold the snare, a tom or the floor tom to open its link.">
+          <!-- kit-art:start -->
+          <img class="part" data-part="base" src="/src/features/drum-kit/art/base.svg" alt="" style="--x0: 0.18750; --y0: 0.04980; --w: 0.77539; --h: 0.88184" />
+          <img class="part" data-part="hihat" src="/src/features/drum-kit/art/hihat.svg" alt="" style="--x0: 0.02083; --y0: 0.28516; --w: 0.25260; --h: 0.35840; --ox: 0.4979; --oy: 0.4979" />
+          <img class="part" data-part="ride" src="/src/features/drum-kit/art/ride.svg" alt="" style="--x0: 0.73698; --y0: 0.04395; --w: 0.24805; --h: 0.37207; --ox: 0.4996; --oy: 0.4952" />
+          <img class="part" data-part="beater" src="/src/features/drum-kit/art/beater.svg" alt="" style="--x0: 0.51888; --y0: 0.48340; --w: 0.03581; --h: 0.07031; --ox: 0.4921; --oy: 0.9188" />
+          <img class="part" data-part="footboard" src="/src/features/drum-kit/art/footboard.svg" alt="" style="--x0: 0.51823; --y0: 0.55664; --w: 0.04036; --h: 0.20215; --ox: 0.4898; --oy: 0.9763" />
+          <img class="part" data-part="floor-tom" src="/src/features/drum-kit/art/floor-tom.svg" alt="" style="--x0: 0.63542; --y0: 0.39746; --w: 0.20573; --h: 0.29785; --ox: 0.4981; --oy: 0.5014" />
+          <img class="part" data-part="snare" src="/src/features/drum-kit/art/snare.svg" alt="" style="--x0: 0.26628; --y0: 0.37500; --w: 0.19271; --h: 0.26074; --ox: 0.4967; --oy: 0.4947" />
+          <img class="part" data-part="tom-left" src="/src/features/drum-kit/art/tom-left.svg" alt="" style="--x0: 0.36393; --y0: 0.06445; --w: 0.16211; --h: 0.22559; --ox: 0.5019; --oy: 0.4971" />
+          <img class="part" data-part="tom-right" src="/src/features/drum-kit/art/tom-right.svg" alt="" style="--x0: 0.55469; --y0: 0.07031; --w: 0.16211; --h: 0.22559; --ox: 0.5004; --oy: 0.5035" />
+          <!-- kit-art:end -->
+          <!-- kick-face:start -->
+          <img class="part face" data-face="base" src="/src/features/drum-kit/art/face-base.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="neutral" src="/src/features/drum-kit/art/face-neutral.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="wince" src="/src/features/drum-kit/art/face-wince.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="dazed" src="/src/features/drum-kit/art/face-dazed.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="shock" src="/src/features/drum-kit/art/face-shock.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="anime" src="/src/features/drum-kit/art/face-anime.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="ko" src="/src/features/drum-kit/art/face-ko.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="steam" src="/src/features/drum-kit/art/face-steam.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="deverror" src="/src/features/drum-kit/art/face-deverror.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="ascended" src="/src/features/drum-kit/art/face-ascended.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="ghost" src="/src/features/drum-kit/art/face-ghost.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="bonk" src="/src/features/drum-kit/art/face-bonk.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="ringing" src="/src/features/drum-kit/art/face-ringing.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="unimpressed" src="/src/features/drum-kit/art/face-unimpressed.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <img class="part face" data-face="laugh" src="/src/features/drum-kit/art/face-laugh.svg" alt="" style="--x0: 0.47266; --y0: 0.31055; --w: 0.13542; --h: 0.24121; --ox: 0.5; --oy: 0.713" />
+          <!-- kick-face:end -->
+          <!-- The maker's badge, printed on the bass drum's far hoop past the rack toms, linking to the kit. -->
+          <a class="brand" href="https://www.mapexdrums.com/mapex-uk/products/drums/drum-sets/venus/venus-drum-kits" target="_blank" rel="noopener" aria-label="My kit: Mapex Venus">
+            <svg viewBox="0 0 1536 1024" aria-hidden="true">
+              <path id="brand-arc" d="M 752 86.5 A 359.5 359.5 0 0 1 912 86.5" fill="none" />
+              <text><textPath href="#brand-arc" startOffset="50%" text-anchor="middle">MAPEX</textPath></text>
+            </svg>
+          </a>
+          <button type="button" class="piece" data-sound="kick" data-keys-on="footboard" aria-label="Kick drum" style="--x: 0.5406; --y: 0.439; --rx: 0.1146; --ry: 0.124; --angle: -1.9deg"></button>
+          <a class="piece" style="--x: 0.7379; --y: 0.5468; --rx: 0.1043; --ry: 0.1492; --angle: 4.0deg; --depth: 0.11; --tilt: 12deg" data-sound="floor-tom" href="https://x.com/urjit_" target="_blank" rel="noopener noreferrer" aria-label="X">
+            <svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 4l11.733 16h4.267l-11.733 -16l-4.267 0" /><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" /></svg>
+          </a>
+          <a class="piece" style="--x: 0.362; --y: 0.504; --rx: 0.095; --ry: 0.127; --angle: -13.6deg; --depth: 0.05; --tilt: -12deg" data-sound="snare" href="mailto:urjitc@gmail.com" aria-label="Email">
+            <svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10" /><path d="M3 7l9 6l9 -6" /></svg>
+          </a>
+          <a class="piece" style="--x: 0.4453; --y: 0.1766; --rx: 0.0818; --ry: 0.1106; --angle: -13.8deg; --depth: 0.04; --tilt: -10deg" data-sound="tom-left" href="https://github.com/urjitc" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" /></svg>
+          </a>
+          <a class="piece" style="--x: 0.6358; --y: 0.1839; --rx: 0.0814; --ry: 0.1128; --angle: 1.2deg; --depth: 0.04; --tilt: 10deg" data-sound="tom-right" href="https://www.linkedin.com/in/urjitc" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+            <svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 11v5" /><path d="M8 8v.01" /><path d="M12 16v-5" /><path d="M16 16v-3a2 2 0 1 0 -4 0" /><path d="M3 7a4 4 0 0 1 4 -4h10a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-10a4 4 0 0 1 -4 -4l0 -10" /></svg>
+          </a>
+          <button type="button" class="piece cymbal" data-sound="hihat" aria-label="Hi-hat" style="--x: 0.1466; --y: 0.4636; --rx: 0.1262; --ry: 0.1701; --angle: -30.7deg"></button>
+          <button type="button" class="piece cymbal" data-sound="ride" aria-label="Crash ride cymbal" style="--x: 0.8609; --y: 0.2282; --rx: 0.1211; --ry: 0.1805; --angle: -15.5deg; --keys-at: 118deg"></button>
         </div>
-        <canvas
-          id="ascii-canvas"
-          role="img"
-          aria-label="Interactive ASCII drum kit. Move to push glyphs; click to pulse."
-        ></canvas>
+        <div class="controls">
+          <div class="kit-switch" id="kit-switch" role="group" aria-label="Drum sounds">
+            <button type="button" data-kit="rock" aria-pressed="true">Rock</button>
+            <button type="button" data-kit="trap" aria-pressed="false">Trap</button>
+            <button type="button" data-kit="8bit" aria-pressed="false">8-bit</button>
+          </div>
+          <span class="divider" aria-hidden="true"></span>
+          <div class="kit-switch" id="theme-switch" role="group" aria-label="Colour theme">
+            <button type="button" data-theme="red" aria-pressed="true">Red</button>
+            <button type="button" data-theme="light" aria-pressed="false">Light</button>
+            <button type="button" data-theme="dark" aria-pressed="false">Dark</button>
+          </div>
+          <span class="divider" aria-hidden="true"></span>
+          <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" aria-hidden="true">
+              <path d="M6 15h-2a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h2l3.5 -4.5a.8 .8 0 0 1 1.5 .5v14a.8 .8 0 0 1 -1.5 .5l-3.5 -4.5" />
+              <path class="waves" d="M15 8a5 5 0 0 1 0 8M17.7 5a9 9 0 0 1 0 14" />
+              <path class="mute" d="M16 10l4 4m0 -4l-4 4" />
+            </svg>
+            <span>Sound on</span>
+          </button>
+        </div>
       </section>
+
+      <section class="about" aria-label="About">
+        <h1>Urjit Chakraborty</h1>
+        <p class="tagline">CS @ University of Maryland, College Park</p>
+      </section>
+
+      <section aria-labelledby="work-title">
+        <h2 id="work-title">Experience</h2>
+        <ul class="rows">
+          <li>
+            <a class="row" href="https://rudimint.com" target="_blank" rel="noopener noreferrer">
+              <img class="logo" src="/src/assets/logos/rudimint.svg" alt="" />
+              <span class="row-name">Rudimint</span><span class="row-date">Aug 2026 – Present</span>
+              <span class="row-sub">Co-Founder</span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="https://www.boozallen.com" target="_blank" rel="noopener noreferrer">
+              <img class="logo big" src="/src/assets/logos/booz-allen.svg" alt="" />
+              <span class="row-name">Booz Allen Hamilton</span><span class="row-date">Sep 2026 – Present</span>
+              <span class="row-sub">Technical Lead · Contract</span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="https://md.spacegrant.org/" target="_blank" rel="noopener noreferrer">
+              <img class="logo insignia" src="/src/assets/logos/nasa.svg" alt="" />
+              <span class="row-name">NASA Space Grant</span><span class="row-date">Jun – Aug 2026</span>
+              <span class="row-sub">Software Engineer Intern</span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="https://www.exiger.com" target="_blank" rel="noopener noreferrer">
+              <img class="logo" src="/src/assets/logos/exiger.svg" alt="" />
+              <span class="row-name">Exiger</span><span class="row-date">Sep – Dec 2025</span>
+              <span class="row-sub">Software Engineer · Contract</span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="https://gel.umd.edu/" target="_blank" rel="noopener noreferrer">
+              <img class="logo" src="/src/assets/logos/umd.svg" alt="" />
+              <span class="row-name">UMD Global Ecology Lab</span><span class="row-date">Sep – Dec 2025</span>
+              <span class="row-sub">Machine Learning Engineer Intern</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="oss-title">
+        <h2 id="oss-title">Open source</h2>
+        <ul class="rows">
+          <li>
+            <a class="row" href="https://github.com/ThinkEx-OSS/thinkex" target="_blank" rel="noopener noreferrer">
+              <img class="logo" src="/src/assets/logos/thinkex.svg" alt="" />
+              <span class="row-name">ThinkEx</span>
+              <span class="row-sub">An open-source workspace for source-heavy study and research.</span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="https://github.com/ThinkEx-OSS/filerouter" target="_blank" rel="noopener noreferrer">
+              <img class="logo" src="/src/assets/logos/filerouter.svg" alt="" />
+              <span class="row-name">FileRouter</span>
+              <span class="row-sub">One SDK, CLI and API for parsing documents across providers.</span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="https://github.com/cloudflare/agents" target="_blank" rel="noopener noreferrer">
+              <img class="logo" src="/src/assets/logos/cloudflare.svg" alt="" />
+              <span class="row-name">Cloudflare</span>
+              <span class="row-sub">Contributor to the Agents SDK: streaming, hibernation and tool-call bugs.</span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="https://github.com/assistant-ui/assistant-ui" target="_blank" rel="noopener noreferrer">
+              <img class="logo" src="/src/assets/logos/assistant-ui.svg" alt="" />
+              <span class="row-name">assistant-ui</span>
+              <span class="row-sub">Contributor to the React AI chat library: performance and message handling.</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <!-- The drums are the main links, but these are plain and obvious. -->
+      <footer class="footer">
+        <a href="https://github.com/urjitc" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/in/urjitc" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/urjit_" target="_blank" rel="noopener noreferrer">X</a>
+        <a href="mailto:urjitc@gmail.com">Email</a>
+      </footer>
     </main>
     <script type="module" src="/src/pages/home.ts"></script>
   </body>
