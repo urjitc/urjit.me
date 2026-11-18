@@ -160,6 +160,13 @@ a:focus-visible {
   font-weight: 400;
 }
 
+/* The role, inline after the company and quieter. */
+.row-role {
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 300;
+}
+
 .row-date,
 .row-sub {
   color: var(--muted);

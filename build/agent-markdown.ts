@@ -2,7 +2,7 @@
  * Turns the built homepage into Markdown for AI agents (served at /index.md, /llms.txt, and
  * to `Accept: text/markdown` requests by worker/index.ts). It reads the page's own markup,
  * so the HTML stays the single source: the name and tagline, each section's link rows
- * (name, role or description, dates) and the footer links.
+ * (name, role, description, dates) and the footer links.
  */
 export function toMarkdown(html: string): string {
   const text = (fragment = '') =>
@@ -28,10 +28,11 @@ export function toMarkdown(html: string): string {
   for (const [, section = ''] of html.matchAll(/<section aria-labelledby="[^"]+">([\s\S]*?)<\/section>/g)) {
     lines.push('', `## ${first(/<h2[^>]*>([\s\S]*?)<\/h2>/, section)}`, '')
     for (const [, href, row = ''] of section.matchAll(/<a class="row" href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)) {
-      const name = first(/class="row-name">([\s\S]*?)<\/span>/, row)
+      const role = first(/class="row-role">([\s\S]*?)<\/span>/, row)
+      const name = first(/class="row-name">([^<]*)/, row)
       const sub = first(/class="row-sub">([\s\S]*?)<\/span>/, row)
       const date = first(/class="row-date">([\s\S]*?)<\/span>/, row)
-      lines.push(`- [${name}](${href}): ${sub}${date ? ` (${date})` : ''}`)
+      lines.push(`- [${name}](${href}): ${role ? `${role}. ` : ''}${sub}${date ? ` (${date})` : ''}`)
     }
   }
 
