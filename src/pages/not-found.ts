@@ -1,5 +1,5 @@
 import { DRUM_HIT, SOUND_KEY } from '../features/drum-kit'
-import { playDrum } from '../features/drum-kit/synth'
+import { playDrum, wakeAudio } from '../features/drum-kit/synth'
 import { requireElement } from '../lib/dom'
 
 /**
@@ -23,6 +23,7 @@ function hit(): void {
 zero.addEventListener('pointerdown', (event) => {
   if (event.button === 0) hit()
 })
+zero.addEventListener('pointerup', wakeAudio)
 zero.addEventListener('click', (event) => {
   if (event.detail === 0) hit()
 })

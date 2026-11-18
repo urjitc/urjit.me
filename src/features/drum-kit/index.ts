@@ -1,4 +1,4 @@
-import { KITS, loadSamples, playDrum, type Kit } from './synth'
+import { KITS, loadSamples, playDrum, wakeAudio, type Kit } from './synth'
 
 const HOLD_MS = 500
 /** How long the drumstick cursor shows a stick down after a click (ms). */
@@ -110,6 +110,15 @@ const FOOTBOARD_HIT: Keyframe[] = [
 // most FACE_FADE_SHARE of the time since the last kick, so even a drum roll shows every face
 // whole, cut to cut, instead of a blur of half-faded faces.
 const FACE_MS = 600
+// Playing with the sound off nudges the sound button once per visit (it's small, and the
+// drums looking hit but silent would otherwise read as broken).
+const NUDGE: Keyframe[] = [
+  { scale: 1 },
+  { scale: 1.15, offset: 0.25, easing: 'ease-out' },
+  { scale: 1, offset: 0.5, easing: 'ease-in-out' },
+  { scale: 1.15, offset: 0.75, easing: 'ease-out' },
+  { scale: 1 },
+]
 const FACE_FADE_MS = 48
 const FACE_SWAP_MS = 90
 const FACE_FADE_SHARE = 0.2
@@ -248,6 +257,7 @@ export function mountDrumKit(
   let recent: { sound: string; at: number }[] = []
   let lastReaction: string | undefined
   let lastKickAt = -Infinity
+  let nudged = false
   // Key labels that sit on a moving part, by the part's name.
   const riders = new Map<string, HTMLElement>()
   // Each key's label, by key code, to flash it when that key is played.
@@ -387,6 +397,10 @@ export function mountDrumKit(
   /** Plays a piece (its own sound unless another is given) and moves it to match. */
   function hit(piece: HTMLElement, sound = piece.dataset.sound): void {
     if (soundOn && sound) playDrum(currentKit, sound)
+    else if (!nudged) {
+      nudged = true
+      if (!reducedMotion.matches) soundToggle.animate(NUDGE, { duration: 900 })
+    }
     if (sound) listen(sound)
     if (reducedMotion.matches) return
     if (sound === 'bell') {
@@ -450,6 +464,7 @@ export function mountDrumKit(
   // Release after a full hold opens the link. pointerup still counts as a user gesture,
   // so window.open is not blocked as a popup.
   kit.addEventListener('pointerup', () => {
+    wakeAudio()
     if (hold?.ready) activate(hold.piece)
     endHold()
   })

@@ -272,10 +272,15 @@ export function loadSamples(kit: Kit): void {
   decoder ??= new OfflineAudioContext(1, 1, 44100)
   const context = decoder
   for (const [name, url] of Object.entries(spec.urls)) {
-    void fetch(url)
-      .then((response) => response.arrayBuffer())
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error(`${response.status} for ${url}`)
+        return response.arrayBuffer()
+      })
       .then((data) => context.decodeAudioData(data))
       .then((buffer) => sampleBuffers.set(`${kit}/${name}`, buffer))
+      // A dropped connection shouldn't silence the kit for the visit: the next hit retries.
+      .catch(() => loadedKits.delete(kit))
   }
 }
 
@@ -337,12 +342,26 @@ function trimmed(audio: AudioContext, into: AudioNode, levels: Levels, name: str
   return trim
 }
 
+/**
+ * Wakes the audio after a tap. On touch screens a finger landing isn't yet a gesture that
+ * lets a page make sound; lifting it is. A first tap's hit, made as the finger landed,
+ * waits in the paused context and plays once this resumes it.
+ */
+export function wakeAudio(): void {
+  void output?.audio.resume()
+}
+
 /** Plays a drum on a kit. Call from a user gesture: the first call creates the audio context. */
 export function playDrum(kit: Kit, name: string): void {
   const spec = SPECS[kit]
   if (spec.kind === 'samples') {
     const buffer = sampleBuffers.get(`${kit}/${name}`)
-    if (!buffer) return
+    if (!buffer) {
+      // Still loading (or failed): play the synthesised drum meanwhile, never silence.
+      loadSamples(kit)
+      playDrum('trap', name)
+      return
+    }
     const input = kitInput(kit)
     const { audio } = getOutput()
     void audio.resume()
