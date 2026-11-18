@@ -24,6 +24,8 @@ export default defineConfig({
   // Agent worktrees live in .claude/; their edits shouldn't reload this server's pages.
   server: { watch: { ignored: ['**/.claude/**'] } },
   build: {
+    // The 404 page is its own entry; Cloudflare serves dist/404.html for unknown paths.
+    rollupOptions: { input: { main: 'index.html', notFound: '404.html' } },
     cssCodeSplit: false,
     modulePreload: { polyfill: false },
   },

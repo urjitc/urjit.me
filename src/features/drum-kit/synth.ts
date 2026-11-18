@@ -329,7 +329,6 @@ function playFor(kit: Kit, spec: SynthKit): Play {
   return (plays[kit] = { audio, out, noise: makeNoise(audio, NOISE_SECONDS, spec.noiseHold) })
 }
 
-/** Plays a drum on a kit. Call from a user gesture: the first call creates the audio context. */
 /** A gain stage for one hit, at the drum's level trim, feeding `into`. */
 function trimmed(audio: AudioContext, into: AudioNode, levels: Levels, name: string): GainNode {
   const trim = audio.createGain()
@@ -338,6 +337,7 @@ function trimmed(audio: AudioContext, into: AudioNode, levels: Levels, name: str
   return trim
 }
 
+/** Plays a drum on a kit. Call from a user gesture: the first call creates the audio context. */
 export function playDrum(kit: Kit, name: string): void {
   const spec = SPECS[kit]
   if (spec.kind === 'samples') {

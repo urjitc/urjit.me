@@ -8,7 +8,7 @@ const KEY_GAP = 8
 /** How far key labels sit inside a drum's rim, clear of its double hoop lines (px).
     A drum can override it with --keys-inset, and move them round with --keys-at. */
 const KEY_INSET = 14
-const SOUND_KEY = 'sound'
+export const SOUND_KEY = 'sound'
 const KIT_KEY = 'kit'
 
 /** Physical keys (layout-independent `event.code`) laid out left to right like the kit. */
@@ -34,7 +34,7 @@ const HIDDEN_KEYS: Record<string, { piece: string; sound: string }> = {
 
 // A drum's skin is pushed in by the stick and springs back a touch past rest. Only the
 // head moves (its hoop and lugs are static), and moving inward it never runs into the rim.
-const DRUM_HIT: Keyframe[] = [
+export const DRUM_HIT: Keyframe[] = [
   { scale: 1 },
   { scale: 0.965, offset: 0.15, easing: 'ease-out' },
   { scale: 1.012, offset: 0.45, easing: 'ease-in-out' },
