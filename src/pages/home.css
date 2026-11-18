@@ -53,7 +53,6 @@ h2 {
   transition: color 150ms;
 }
 
-.footer a:hover,
 .footer a:focus-visible {
   color: var(--fg);
 }
@@ -64,9 +63,23 @@ a {
   text-underline-offset: 3px;
 }
 
-a:hover,
 a:focus-visible {
   text-decoration-color: currentColor;
+}
+
+/* Hover only where there's a real pointer: on touch, a tap would leave it stuck on. */
+@media (hover: hover) {
+  a:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .footer a:hover {
+    color: var(--fg);
+  }
+
+  .row:hover .logo {
+    opacity: 1;
+  }
 }
 
 /* Logo lists (work, open source): each row is one link — logo on the left, the name,
@@ -121,6 +134,8 @@ a:focus-visible {
   padding: 6px 10px;
   border-radius: 6px;
   text-decoration: none;
+  /* The outline gives its own press feedback on touch (see row-outline.ts). */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* The list's gliding outline marks focus instead. */
@@ -154,7 +169,6 @@ a:focus-visible {
   margin: -8px;
 }
 
-.row:hover .logo,
 .row:focus-visible .logo {
   opacity: 1;
 }

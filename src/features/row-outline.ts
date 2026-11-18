@@ -1,7 +1,8 @@
 /**
  * Gives a `.rows` list one hairline outline that glides to whichever row is hovered or
  * focused, instead of each row lighting up on its own. It fades in on the first row,
- * slides between rows, and fades out when the pointer or focus leaves the list.
+ * slides between rows, and fades out when the pointer or focus leaves the list. On touch,
+ * where nothing hovers, it shows only while a row is pressed.
  */
 export function mountRowOutline(list: HTMLElement): void {
   const outline = document.createElement('li')
@@ -31,9 +32,21 @@ export function mountRowOutline(list: HTMLElement): void {
     target instanceof Element ? target.closest<HTMLElement>('.row') : null
 
   list.addEventListener('pointerover', (event) => {
+    // Touch has no hover: a tap would leave the outline stuck on its row.
+    if (event.pointerType === 'touch') return
     const row = rowOf(event.target)
     if (row) moveTo(row)
   })
+  // On touch, the outline is press feedback instead: it shows while the finger is down.
+  list.addEventListener('pointerdown', (event) => {
+    const row = rowOf(event.target)
+    if (event.pointerType === 'touch' && row) moveTo(row)
+  })
+  for (const type of ['pointerup', 'pointercancel'] as const) {
+    list.addEventListener(type, (event) => {
+      if (event.pointerType === 'touch') setTimeout(() => outline.classList.remove('shown'), 150)
+    })
+  }
   list.addEventListener('pointerleave', () => {
     // Keyboard focus keeps it; a row merely clicked doesn't.
     if (!list.querySelector(':focus-visible')) outline.classList.remove('shown')
