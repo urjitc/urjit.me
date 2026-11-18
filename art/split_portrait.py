@@ -32,7 +32,7 @@ PIECES = {
     'hihat': ((203, 140), 7),  # two stacked cymbals: a double edge
     'ride': ((823, 120), 4),
     'tom-left': ((213, 577), 4),
-    'tom-right': ((785, 548), 4),
+    'tom-right': ((813, 548), 4),
     'snare': ((206, 848), 4),
     'floor-tom': ((781, 833), 4),
 }
