@@ -170,14 +170,14 @@
 }
 
 .hold-ring {
-  width: calc(100% * 0.021 * 1.75 / var(--rx));
+  width: calc(100% * 0.021 * 1.55 / var(--rx));
   height: auto;
   overflow: visible;
   pointer-events: none;
   fill: none;
   stroke: currentColor;
   /* About 1px, the drawing's hairline, at the ring's usual size (viewBox units). */
-  stroke-width: 1.8;
+  stroke-width: 2;
   /* Start at the top, whatever the drum's own turn. */
   rotate: calc(-90deg - var(--angle, 0deg));
 }
@@ -326,7 +326,7 @@
   }
 
   .hold-ring {
-    width: calc(100% * 0.045 * 1.75 / var(--prx));
+    width: calc(100% * 0.045 * 1.55 / var(--prx));
     rotate: -90deg;
   }
 
