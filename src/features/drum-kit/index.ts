@@ -25,10 +25,9 @@ const KEYS: Record<string, string> = {
   KeyK: 'ride',
 }
 
-/** Unlabelled extras, for anyone who goes looking: a key, the piece it hits and its sound. */
+/** An unlabelled extra for anyone who goes looking: a key, the piece it hits and its sound. */
 const HIDDEN_KEYS: Record<string, { piece: string; sound: string }> = {
   KeyO: { piece: 'ride', sound: 'bell' },
-  KeyD: { piece: 'hihat', sound: 'hihat-open' },
 }
 
 // A drum's skin is pushed in by the stick and springs back a touch past rest. Only the
@@ -56,16 +55,6 @@ const BELL_HIT: Keyframe[] = [{ scale: 1 }, { scale: 1.006, offset: 0.15 }, { sc
 const BELL_RING: Keyframe[] = [
   { scale: 1, opacity: 0.9 },
   { scale: 2.6, opacity: 0 },
-]
-
-// An open hi-hat swings longer and looser than a closed one.
-const OPEN_HAT_HIT: Keyframe[] = [
-  { scale: 1 },
-  { scale: 1.02, offset: 0.08 },
-  { scale: 0.993, offset: 0.25 },
-  { scale: 1.012, offset: 0.45 },
-  { scale: 0.997, offset: 0.7 },
-  { scale: 1 },
 ]
 
 // Ba-dum-tss: two snare hits and then the crash, each within RIMSHOT_GAP ms of the last (a
@@ -320,10 +309,6 @@ export function mountDrumKit(
     if (sound === 'bell') {
       parts.get('ride')?.animate(BELL_HIT, 260)
       bellRing.animate(BELL_RING, { duration: 650, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' })
-      return
-    }
-    if (sound === 'hihat-open') {
-      for (const target of [piece, parts.get('hihat')]) target?.animate(OPEN_HAT_HIT, 900)
       return
     }
     // The drum's head and the piece (its icon) move together; the kick also works its pedal.

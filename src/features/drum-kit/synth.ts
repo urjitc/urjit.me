@@ -104,11 +104,10 @@ function clap(play: Play, at: number): void {
 
 /**
  * Per-drum level trims in dB, measured off the site's output (loudness over 400 ms, roughly
- * K-weighted) and set against the snare: kick +2 (Trap's 808 +4 over its own level: the meter
- * overrates its sub-bass, which small speakers can't play), bell -1, open hat -2,
- * closed hat -6. The crash/ride sits under the snare (6 dB on Rock, 3 on the synths):
- * level with it on the meter, it was too loud by ear. Toms keep their recorded level (6-9 dB over the
- * snare on the meter): trimmed to match, they sounded too quiet by ear.
+ * K-weighted) and set against the snare, then corrected by ear: kick +2 (Trap's 808 +4 over
+ * its own level, as small speakers can't play its sub-bass), bell -1, closed hat -6, and the
+ * crash/ride under the snare (6 dB on Rock, 3 on the synths). Toms keep their recorded level:
+ * trimmed to the snare, they sounded too quiet.
  */
 type Levels = Partial<Record<string, number>>
 
@@ -154,11 +153,11 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
     kind: 'samples',
     reverb: 0.22,
     urls: samplesFor('rock'),
-    levels: { kick: 7, hihat: 7.5, 'hihat-open': 1.5, ride: -4.5, bell: -0.5 },
+    levels: { kick: 7, hihat: 7.5, ride: -4.5, bell: -0.5 },
   },
   trap: {
     kind: 'synth',
-    levels: { kick: 4, hihat: 2.5, 'hihat-open': -1, ride: -5.5, bell: -4 },
+    levels: { kick: 4, hihat: 2.5, ride: -5.5, bell: -4 },
     reverb: 0.18,
     drive: 1.4,
     noiseHold: 1,
@@ -182,7 +181,6 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
       'tom-right': (p, t) => tom808(p, t, 125, 0.55),
       'floor-tom': (p, t) => tom808(p, t, 88, 0.7),
       hihat: (p, t) => metal(p, t, 10000, 0.05, 0.6),
-      'hihat-open': (p, t) => metal(p, t, 10000, 0.42, 0.5),
       // A ride bell: two inharmonic partials ringing over a short metal tick.
       bell: (p, t) => {
         tone(p, t, 'triangle', 830, 830, 0.01, 1.1, 0.3)
@@ -198,7 +196,7 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
   },
   '8bit': {
     kind: 'synth',
-    levels: { kick: 0.5, hihat: 4.5, 'hihat-open': 1, ride: -4, bell: -1 },
+    levels: { kick: 0.5, hihat: 4.5, ride: -4, bell: -1 },
     reverb: 0.08,
     drive: 1.2,
     steps: 8,
@@ -213,7 +211,6 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
       'tom-right': (p, t) => tone(p, t, 'square', 250, 165, 0.05, 0.22, 0.4),
       'floor-tom': (p, t) => tone(p, t, 'square', 170, 110, 0.05, 0.28, 0.45),
       hihat: (p, t) => noise(p, t, 'highpass', 7000, 0.04, 0.4),
-      'hihat-open': (p, t) => noise(p, t, 'highpass', 7000, 0.32, 0.32),
       ride: (p, t) => noise(p, t, 'highpass', 3000, 0.7, 0.25),
       bell: (p, t) => {
         tone(p, t, 'square', 1047, 1047, 0.01, 0.4, 0.22)

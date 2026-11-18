@@ -139,13 +139,19 @@ a:focus-visible {
 }
 
 /* Marks that read small in the 24px box: a two-line wordmark, and NASA's round insignia,
-   whose swoosh and fine lettering need even more room to register. */
+   whose swoosh and fine lettering need even more room. They get a real larger size (drawn
+   sharp, unlike a scale transform, which blurred them on phones), with negative margins
+   so they stay centred in the logo column. */
 .logo.big {
-  scale: 1.35;
+  width: 32px;
+  height: 32px;
+  margin: -4px;
 }
 
 .logo.insignia {
-  scale: 1.65;
+  width: 40px;
+  height: 40px;
+  margin: -8px;
 }
 
 .row:hover .logo,
