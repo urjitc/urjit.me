@@ -13,9 +13,9 @@
 
 /* Themes: the colours everything is drawn in. Red is the default; Light and Dark are for
    anyone who finds the red hard to read (chosen in the controls, src/features/theme.ts).
-   Muted text is 88% of the text colour: about 4.8:1 on the red, past WCAG AA's 4.5:1. */
+   Muted text is 88% of the text colour: about 5.5:1 on the red, past WCAG AA's 4.5:1. */
 :root {
-  --bg: #c90b1a;
+  --bg: #b3192a;
   --fg: #fff;
   --muted: color-mix(in srgb, var(--fg) 88%, var(--bg));
   /* The drawings and logos are white images; Light turns them black. */
