@@ -104,7 +104,8 @@ function clap(play: Play, at: number): void {
 
 /**
  * Per-drum level trims in dB, measured off the site's output (loudness over 400 ms, roughly
- * K-weighted) and set against the snare: kick +2 (Trap's 808 +6), bell -1, open hat -2,
+ * K-weighted) and set against the snare: kick +2 (Trap's 808 untrimmed: the meter undervalues its
+ * sub-bass, and trimmed it sounded far too quiet), bell -1, open hat -2,
  * closed hat -6. The crash/ride sits under the snare (6 dB on Rock, 3 on the synths):
  * level with it on the meter, it was too loud by ear. Toms keep their recorded level (6-9 dB over the
  * snare on the meter): trimmed to match, they sounded too quiet by ear.
@@ -157,7 +158,7 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
   },
   trap: {
     kind: 'synth',
-    levels: { kick: -6, hihat: 2.5, 'hihat-open': -1, ride: -5.5, bell: -4 },
+    levels: { hihat: 2.5, 'hihat-open': -1, ride: -5.5, bell: -4 },
     reverb: 0.18,
     drive: 1.4,
     noiseHold: 1,
