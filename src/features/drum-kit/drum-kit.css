@@ -113,6 +113,17 @@
   rotate: var(--angle, 0deg);
 }
 
+/* The kick's pedal is part of its hit area: a box over the footboard (its centre and half-
+   size as fractions of the drawing, --fx etc., --pfx etc. in portrait), placed inside the
+   kick's button so a press there plays the kick. */
+.pedal-area {
+  position: absolute;
+  left: calc((var(--fx) - var(--frx) - var(--x) + var(--rx)) / (2 * var(--rx)) * 100%);
+  top: calc((var(--fy) - var(--fry) - var(--y) + var(--ry)) / (2 * var(--ry)) * 100%);
+  width: calc(var(--frx) / var(--rx) * 100%);
+  height: calc(var(--fry) / var(--ry) * 100%);
+}
+
 .piece:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
@@ -259,6 +270,13 @@
 
   .part[data-layout="portrait"] {
     display: block;
+  }
+
+  .pedal-area {
+    left: calc((var(--pfx) - var(--pfrx) - var(--px) + var(--prx)) / (2 * var(--prx)) * 100%);
+    top: calc((var(--pfy) - var(--pfry) - var(--py) + var(--pry)) / (2 * var(--pry)) * 100%);
+    width: calc(var(--pfrx) / var(--prx) * 100%);
+    height: calc(var(--pfry) / var(--pry) * 100%);
   }
 
   .piece {
@@ -415,22 +433,35 @@
   }
 }
 
-/* With a mouse, the kit's cursor is a pair of drumsticks seen from the player's seat; on each
-   click the other stick comes down (index.ts sets data-stick). The click lands where the
-   tips meet. Links that aren't drums (the MAPEX badge) keep the normal pointer. */
+/* With a mouse, the kit's cursor is a pair of drumsticks seen from the player's seat, in the
+   page's ink (art/sticks.py); on each click the other stick comes down (index.ts sets
+   data-stick). The click lands where the tips meet. Links that aren't drums (the MAPEX
+   badge) keep the normal pointer. */
 @media (hover: hover) and (pointer: fine) {
+  .kit {
+    --sticks-rest: url("./cursors/sticks-rest-white.svg");
+    --sticks-left: url("./cursors/sticks-left-white.svg");
+    --sticks-right: url("./cursors/sticks-right-white.svg");
+  }
+
+  :root[data-theme="light"] .kit {
+    --sticks-rest: url("./cursors/sticks-rest-black.svg");
+    --sticks-left: url("./cursors/sticks-left-black.svg");
+    --sticks-right: url("./cursors/sticks-right-black.svg");
+  }
+
   .kit,
   .kit .piece {
-    cursor: url("./cursors/sticks-rest.svg") 20 11, pointer;
+    cursor: var(--sticks-rest) 20 11, pointer;
   }
 
   .kit[data-stick="left"],
   .kit[data-stick="left"] .piece {
-    cursor: url("./cursors/sticks-left.svg") 20 11, pointer;
+    cursor: var(--sticks-left) 20 11, pointer;
   }
 
   .kit[data-stick="right"],
   .kit[data-stick="right"] .piece {
-    cursor: url("./cursors/sticks-right.svg") 20 11, pointer;
+    cursor: var(--sticks-right) 20 11, pointer;
   }
 }

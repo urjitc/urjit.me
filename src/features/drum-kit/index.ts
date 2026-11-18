@@ -106,19 +106,25 @@ const FOOTBOARD_HIT: Keyframe[] = [
 // springs back, while a random reaction's features (never the same twice running) crossfade
 // in over the resting ones and back out over FACE_MS. The hair and outline never change.
 // Kicked again mid-reaction, the face re-squashes from where it is and the showing reaction
-// fades out over FACE_SWAP_MS as the next fades in, so rapid kicks flow from face to face.
+// fades out as the next fades in. The faster the kicks, the shorter those fades: each is at
+// most FACE_FADE_SHARE of the time since the last kick, so even a drum roll shows every face
+// whole, cut to cut, instead of a blur of half-faded faces.
 const FACE_MS = 600
+const FACE_FADE_MS = 48
 const FACE_SWAP_MS = 90
+const FACE_FADE_SHARE = 0.2
 const FACE_AWAY: Keyframe[] = [{ opacity: 1 }, { opacity: 0 }]
-const FACE_IN: Keyframe[] = [
+/** A reaction's features: in over `fade` (a fraction of the duration), held, then out. */
+const faceIn = (fade: number): Keyframe[] => [
   { opacity: 0 },
-  { opacity: 1, offset: 0.08 },
+  { opacity: 1, offset: fade },
   { opacity: 1, offset: 0.7 },
   { opacity: 0 },
 ]
-const FACE_OUT: Keyframe[] = [
+/** The resting features, the mirror of faceIn. */
+const faceOut = (fade: number): Keyframe[] => [
   { opacity: 1 },
-  { opacity: 0, offset: 0.08 },
+  { opacity: 0, offset: fade },
   { opacity: 0, offset: 0.7 },
   { opacity: 1 },
 ]
@@ -143,8 +149,9 @@ function groupBy(elements: Iterable<HTMLElement>, key: (element: HTMLElement) =>
 /**
  * Plays the same animation on every element given (a part's copy in each drawing), from
  * wherever each one is now: a running animation of the same properties is cancelled and the
- * new one starts from its current on-screen values (held through any delay). So hits in
- * quick succession re-strike mid-motion instead of snapping back to rest first.
+ * new one starts from its current on-screen values. So hits in quick succession re-strike
+ * mid-motion instead of snapping back to rest first. A delay defers the whole swap, so the
+ * running animation keeps moving until then rather than freezing.
  */
 function animateAll(
   elements: readonly HTMLElement[] | undefined,
@@ -154,7 +161,11 @@ function animateAll(
   const props = [...new Set(keyframes.flatMap(Object.keys))].filter(
     (key) => !['offset', 'easing', 'composite'].includes(key),
   )
-  const options = typeof timing === 'number' ? { duration: timing } : timing
+  const { delay = 0, ...options } = typeof timing === 'number' ? { duration: timing } : timing
+  if (delay) {
+    setTimeout(() => animateAll(elements, keyframes, options), delay)
+    return
+  }
   // Read every current value before cancelling anything, so styles are computed once.
   const plans = (elements ?? []).map((element) => {
     const running = element
@@ -168,7 +179,7 @@ function animateAll(
   })
   for (const { element, running, first } of plans) {
     for (const animation of running) animation.cancel()
-    element.animate([first ?? {}, ...keyframes.slice(1)], { ...options, fill: 'backwards' })
+    element.animate([first ?? {}, ...keyframes.slice(1)], options)
   }
 }
 
@@ -236,6 +247,7 @@ export function mountDrumKit(
   // The last few hits (sound, time), to spot a ba-dum-tss.
   let recent: { sound: string; at: number }[] = []
   let lastReaction: string | undefined
+  let lastKickAt = -Infinity
   // Key labels that sit on a moving part, by the part's name.
   const riders = new Map<string, HTMLElement>()
   // Each key's label, by key code, to flash it when that key is played.
@@ -321,26 +333,32 @@ export function mountDrumKit(
     if (!reaction) return
     lastReaction = reaction
     const reacting = byFace.get(reaction) ?? []
-    const timing = { duration: FACE_MS, delay: PEDAL_MS * PEDAL_IMPACT }
-    fadeAllBut(reaction, { duration: FACE_SWAP_MS, delay: timing.delay })
-    animateAll(restFaces, FACE_OUT, timing)
-    animateAll(reacting, FACE_IN, timing)
-    animateAll([...baseFaces, ...restFaces, ...reacting], FACE_HIT, timing)
+    const now = performance.now()
+    const quick = (now - lastKickAt) * FACE_FADE_SHARE
+    lastKickAt = now
+    const fade = Math.min(FACE_FADE_MS, quick) / FACE_MS
+    // The face changes as the beater lands; until then the last reaction plays on.
+    setTimeout(() => {
+      fadeAllBut(reaction, Math.min(FACE_SWAP_MS, quick))
+      animateAll(restFaces, faceOut(fade), FACE_MS)
+      animateAll(reacting, faceIn(fade), FACE_MS)
+      animateAll([...baseFaces, ...restFaces, ...reacting], FACE_HIT, FACE_MS)
+    }, PEDAL_MS * PEDAL_IMPACT)
   }
 
   /** Fades out any reaction still showing from an earlier kick, other than `keep`. */
   function fadeAllBut(keep: string, timing: number | KeyframeAnimationOptions): void {
     const showing = faces.filter(
       ({ dataset: { face } }) => face !== keep && face !== 'base' && face !== 'neutral',
-    ).filter((face) => face.getAnimations().length)
+    ).filter((face) => Number(getComputedStyle(face).opacity) > 0)
     animateAll(showing, FACE_AWAY, timing)
   }
 
   /** The face laughs: its features crossfade to the laugh, and the head shakes. */
   function laugh(): void {
     fadeAllBut('laugh', FACE_SWAP_MS)
-    animateAll(restFaces, FACE_OUT, LAUGH_MS)
-    animateAll(laughFaces, FACE_IN, LAUGH_MS)
+    animateAll(restFaces, faceOut(0.08), LAUGH_MS)
+    animateAll(laughFaces, faceIn(0.08), LAUGH_MS)
     if (reducedMotion.matches) return
     animateAll([...baseFaces, ...restFaces, ...laughFaces], LAUGH_SHAKE, { duration: LAUGH_MS, easing: 'ease-out' })
   }

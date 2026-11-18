@@ -1,7 +1,7 @@
 """
-Draws the drumstick cursors (src/features/drum-kit/cursors/sticks-*.svg): a pair of sticks
-seen from the player's seat, in the kit drawing's style, hairline white ink over red, so they
-read the same on every theme (the red fill carries them on light and dark pages).
+Draws the drumstick cursors (src/features/drum-kit/cursors/sticks-*.svg): a pair of slim
+sticks seen from the player's seat, solid in the page's ink like the kit drawing: white for
+the red and dark themes, black for light.
 
     python3 -I art/sticks.py
 
@@ -15,13 +15,11 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parent.parent / 'src' / 'features' / 'drum-kit' / 'cursors'
 SIZE = 40
 HOT = (20, 11)
-RED, INK, LINE = '#c90b1a', '#fff', 1.1
-# The red rim around the white ink: lost on the red page, it outlines the sticks on light ones.
-RIM = 2.8
+INKS = {'white': '#fff', 'black': '#161616'}
 # Half-widths along the shaft (fractions of the length): butt, shaft, taper, neck. The bead is
-# an oval past the neck, drawn over it so its outline marks where it starts.
-SHAFT = [(0, 2.5), (0.6, 2.2), (0.85, 0.95), (0.9, 0.95)]
-BEAD = (0.945, 0.07, 1.6)  # centre, half-length (fractions of the length), half-width (px)
+# an oval past the neck.
+SHAFT = [(0, 1.7), (0.5, 1.5), (0.88, 0.6), (0.91, 0.6)]
+BEAD = (0.945, 0.045, 1.05)  # centre, half-length (fractions of the length), half-width (px)
 
 
 def half_width(t):
@@ -60,9 +58,11 @@ POSES = {
     'right': (stick((6, 36.2), (14.5, 4.5), 0.92), stick((32.5, 36.2), HOT)),
 }
 
+for old in OUT.glob('sticks-*.svg'):
+    old.unlink()
 for name, (left, right) in POSES.items():
-    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{SIZE}" height="{SIZE}" viewBox="0 0 {SIZE} {SIZE}">'
-           f'<g fill="none" stroke="{RED}" stroke-width="{RIM}" stroke-linejoin="round">{left}{right}</g>'
-           f'<g fill="{RED}" stroke="{INK}" stroke-width="{LINE}" stroke-linejoin="round">{left}{right}</g></svg>')
-    (OUT / f'sticks-{name}.svg').write_text(svg)
-    print(f'sticks-{name}.svg')
+    for ink, colour in INKS.items():
+        svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{SIZE}" height="{SIZE}" viewBox="0 0 {SIZE} {SIZE}">'
+               f'<g fill="{colour}" stroke="{colour}" stroke-width="0.6" stroke-linejoin="round">{left}{right}</g></svg>')
+        (OUT / f'sticks-{name}-{ink}.svg').write_text(svg)
+        print(f'sticks-{name}-{ink}.svg')
