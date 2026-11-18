@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
@@ -26,7 +27,16 @@ export default defineConfig({
   server: { watch: { ignored: ['**/.claude/**'] }, proxy: { '/api': 'http://localhost:8787' } },
   build: {
     // The 404 page is its own entry; Cloudflare serves dist/404.html for unknown paths.
-    rollupOptions: { input: { main: 'index.html', notFound: '404.html' } },
+    // Each blog post is a plain page of its own (blog/<slug>/index.html).
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        notFound: '404.html',
+        ...Object.fromEntries(
+          readdirSync('blog').map((slug) => [`blog/${slug}`, `blog/${slug}/index.html`]),
+        ),
+      },
+    },
     cssCodeSplit: false,
     modulePreload: { polyfill: false },
   },

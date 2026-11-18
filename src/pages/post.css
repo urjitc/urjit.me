@@ -1,0 +1,384 @@
+/* Blog posts (blog/<slug>/index.html), laid out after ishaikh.com's. Never red: the page's
+   inline script picks Light or Dark. Scoped to <body class="post-page">, since the build
+   bundles every page's CSS into one file. */
+.post-page {
+  --border: color-mix(in srgb, var(--fg) 10%, transparent);
+  --border-strong: color-mix(in srgb, var(--fg) 20%, transparent);
+  --wash: color-mix(in srgb, var(--fg) 5%, transparent);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root[data-theme="dark"]:has(.post-page) {
+  color-scheme: dark;
+}
+
+.post-page main {
+  width: min(calc(100% - 40px), 680px);
+  margin: 0 auto;
+  padding: 40px 0 56px;
+  font-size: 17px;
+  line-height: 1.65;
+  /* Regular, not the homepage's Light: Light is too faint for reading at length. */
+  font-weight: 400;
+}
+
+.post-back {
+  display: inline-block;
+  margin-bottom: 36px;
+  color: var(--muted);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.post-header {
+  margin-bottom: 32px;
+}
+
+.post-title {
+  margin: 6px 0 12px;
+  font-size: clamp(26px, 4.6vw, 34px);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.post-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* The byline's links underline only on hover or keyboard focus. */
+.post-meta a {
+  text-decoration-line: none;
+}
+
+.post-meta a:focus-visible {
+  text-decoration-line: underline;
+}
+
+.post-meta + .post-meta {
+  margin-top: 2px;
+}
+
+/* Body text */
+.post-body > * {
+  margin: 0;
+}
+
+.post-body > * + * {
+  margin-top: 1.05em;
+}
+
+.post-body h2,
+.post-body h3 {
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.post-body h2 {
+  margin-top: 2.2em;
+  font-size: 22px;
+}
+
+.post-body h3 {
+  margin-top: 1.7em;
+  font-size: 18px;
+}
+
+.post-body strong {
+  font-weight: 600;
+}
+
+.post-body ul,
+.post-body ol {
+  padding-left: 1.3em;
+}
+
+.post-body li + li {
+  margin-top: 0.45em;
+}
+
+.post-body li > * + * {
+  margin-top: 0.6em;
+}
+
+.post-body [id] {
+  scroll-margin-top: 24px;
+}
+
+.post-body code {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--wash);
+  font-family: var(--mono);
+  font-size: 0.84em;
+}
+
+.post-body pre {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.post-body pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.post-body small,
+.post-footnotes {
+  display: block;
+  color: var(--muted);
+  font-size: 0.86em;
+}
+
+.post-body figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.84em;
+  line-height: 1.45;
+}
+
+/* Figures */
+.post-figure,
+.post-bars,
+.post-table-wrap,
+.post-figure-row,
+.post-figure-group,
+.post-gallery {
+  margin-block: 1.6em;
+}
+
+.post-body > .post-figure + *,
+.post-body > .post-bars + *,
+.post-body > .post-figure-row + * {
+  margin-top: 1.6em;
+}
+
+.post-figure img,
+.post-figure video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Diagrams are drawn for a white page. */
+.post-figure img[src$=".svg"] {
+  background: #fff;
+}
+
+.post-figure--narrow {
+  max-width: 420px;
+  margin-inline: auto;
+}
+
+.post-figure-row {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  align-items: start;
+  gap: 12px;
+}
+
+.post-figure-row .post-figure,
+.post-figure-group .post-figure-row,
+.post-gallery .post-figure {
+  margin: 0;
+}
+
+.post-figure-row--crop img {
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.post-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.post-gallery figcaption {
+  text-align: center;
+}
+
+.post-gallery video {
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.post-aside {
+  margin: 2.4em 0 -0.6em;
+  padding: 10px 14px;
+  border-left: 2px solid var(--border-strong);
+  border-radius: 0 8px 8px 0;
+  background: var(--wash);
+  font-size: 0.92em;
+}
+
+.post-aside > * {
+  margin: 0;
+}
+
+.post-body a.post-jump {
+  white-space: nowrap;
+}
+
+/* Bar charts */
+.post-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.post-bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 5px;
+  font-size: 0.86em;
+}
+
+.post-bar-sub {
+  color: var(--muted);
+}
+
+.post-bar-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.post-bar-track {
+  position: relative;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--wash);
+  overflow: hidden;
+}
+
+.post-bar-fill,
+.post-bar-from {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+}
+
+.post-bar-fill {
+  background: color-mix(in srgb, var(--fg) 38%, transparent);
+}
+
+.post-bar-fill.is-strong {
+  background: var(--fg);
+}
+
+.post-bar-from {
+  background: color-mix(in srgb, var(--fg) 16%, transparent);
+}
+
+.post-bars figcaption {
+  margin-top: 2px;
+}
+
+/* Tables */
+.post-table-wrap {
+  overflow-x: auto;
+}
+
+.post-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+}
+
+.post-body th,
+.post-body td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.post-body th {
+  border-bottom-color: var(--border-strong);
+  font-weight: 600;
+}
+
+/* A support conversation */
+.post-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.92em;
+}
+
+.post-chat p {
+  max-width: 82%;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--wash);
+}
+
+.post-chat .is-customer {
+  align-self: flex-end;
+  color: var(--bg);
+  background: var(--fg);
+}
+
+.post-chat .is-tool {
+  padding: 0 4px;
+  background: none;
+  color: var(--muted);
+  font-size: 0.88em;
+}
+
+.post-page .footer {
+  margin-top: 72px;
+}
+
+@media (hover: hover) {
+  .post-back:hover {
+    color: var(--fg);
+  }
+
+  .post-meta a:hover {
+    text-decoration-line: underline;
+  }
+}
+
+@media (max-width: 720px) {
+  .post-page main {
+    font-size: 16px;
+  }
+
+  .post-figure-row {
+    grid-auto-flow: row;
+  }
+
+  .post-figure-row--crop img {
+    aspect-ratio: 4 / 3;
+  }
+
+  .post-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

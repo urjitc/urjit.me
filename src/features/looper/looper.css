@@ -11,8 +11,10 @@
   display: grid;
   justify-items: center;
   gap: 4px;
-  margin-top: 4px;
-  font-size: 14px;
+  margin-top: 12px;
+  font-size: 15px;
+  /* Light (300) is too faint this small: small text gets Regular, like the controls. */
+  font-weight: 400;
 }
 
 /* The buttons and the name field share one line, crossfading. */

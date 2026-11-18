@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1060" height="380" viewBox="0 0 1060 380" role="img" aria-label="System overview: the iPhone streams camera frames to the board. A laptop on the same network runs the driving loop: it takes the frames, asks OmniVLA on a cloud GPU for a path, turns the path into stick commands and sends them to the board over Wi-Fi. The board feeds a fake joystick sensor that the chair reads 400 times a second. The real joystick can always take over."><style>
+text{font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;font-size:12px;fill:#1d2327}
+.mono{font-family:Menlo,Consolas,monospace;font-size:11px}.small{font-size:11px}
+.title{font-weight:700;font-size:13px}
+.box{fill:#fff;stroke:#1d2327;stroke-width:1.4}.soft{fill:#f4f5f2;stroke:#d6dad6;stroke-width:1.2}
+.wire{fill:none;stroke:#1d2327;stroke-width:1.5}.acc{stroke:#1f6fb2}.accfill{fill:#1f6fb2}
+.wrongc{stroke:#c2410c}.wrongfill{fill:#c2410c}.okfill{fill:#2f7d4a}.mutedtxt{fill:#5d676d}
+</style><rect width="1060" height="380" fill="#fff"/>
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d2327"/></marker>
+        <marker id="a1b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="accfill"/></marker>
+        <marker id="a1o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="wrongfill"/></marker>
+      </defs>
+      <!-- cloud -->
+      <rect x="620" y="16" width="280" height="64" rx="10" class="soft"/>
+      <text x="760" y="40" text-anchor="middle" class="title">Cloud GPU</text>
+      <text x="760" y="60" text-anchor="middle">OmniVLA: image + goal → path</text>
+      <!-- laptop: driving loop -->
+      <rect x="250" y="16" width="250" height="64" rx="10" class="box"/>
+      <text x="375" y="40" text-anchor="middle" class="title">Laptop: driving loop</text>
+      <text x="375" y="60" text-anchor="middle" class="small">path → stick %, or WASD teleop</text>
+      <!-- board -->
+      <rect x="250" y="130" width="560" height="150" rx="10" class="box"/>
+      <text x="266" y="152" class="title">Arduino UNO Q, on the chair</text>
+      <rect x="270" y="168" width="210" height="92" rx="6" class="soft"/>
+      <text x="375" y="192" text-anchor="middle" class="title">web server</text>
+      <text x="375" y="210" text-anchor="middle" class="small">phone + iPad pages</text>
+      <text x="375" y="226" text-anchor="middle" class="small mutedtxt">Linux</text>
+      <rect x="610" y="168" width="180" height="92" rx="6" class="soft"/>
+      <text x="700" y="192" text-anchor="middle" class="title">fake joystick</text>
+      <text x="700" y="210" text-anchor="middle" class="small">feeds the chair 50×/s</text>
+      <text x="700" y="226" text-anchor="middle" class="small">poses as the sensor</text>
+      <text x="700" y="244" text-anchor="middle" class="small mutedtxt">safety stops live here</text>
+      <!-- phone, ipad, laptop -->
+      <rect x="30" y="130" width="160" height="58" rx="8" class="box"/>
+      <text x="110" y="154" text-anchor="middle" class="title">iPhone</text>
+      <text x="110" y="172" text-anchor="middle" class="small">camera, ~14 fps</text>
+      <rect x="30" y="206" width="160" height="58" rx="8" class="box"/>
+      <text x="110" y="230" text-anchor="middle" class="title">iPad</text>
+      <text x="110" y="248" text-anchor="middle" class="small">dashboard, goals</text>
+      <!-- chair -->
+      <rect x="870" y="130" width="170" height="78" rx="8" class="box"/>
+      <text x="955" y="156" text-anchor="middle" class="title">Chair controller</text>
+      <text x="955" y="174" text-anchor="middle" class="small">reads "joystick"</text>
+      <text x="955" y="190" text-anchor="middle" class="small">~400 times/s</text>
+      <rect x="870" y="236" width="170" height="44" rx="8" class="box"/>
+      <text x="955" y="263" text-anchor="middle" class="title">Motors</text>
+      <rect x="610" y="306" width="180" height="52" rx="8" class="box"/>
+      <text x="700" y="328" text-anchor="middle" class="title">Real joystick</text>
+      <text x="700" y="345" text-anchor="middle" class="small">read in parallel</text>
+      <!-- arrows -->
+      <line x1="190" y1="159" x2="268" y2="190" class="wire acc" marker-end="url(#a1b)"/>
+      <text x="30" y="120" class="small">camera frames over Wi-Fi</text>
+      <line x1="190" y1="235" x2="268" y2="225" class="wire" marker-end="url(#a1)" marker-start="url(#a1)"/>
+      <line x1="455" y1="166" x2="455" y2="82" class="wire acc" marker-end="url(#a1b)"/>
+      <text x="447" y="112" text-anchor="end" class="small">frames</text>
+      <line x1="500" y1="38" x2="618" y2="38" class="wire acc" marker-end="url(#a1b)"/>
+      <text x="560" y="30" text-anchor="middle" class="small">frame</text>
+      <line x1="620" y1="60" x2="502" y2="60" class="wire acc" marker-end="url(#a1b)"/>
+      <text x="560" y="76" text-anchor="middle" class="small">path, ~0.5 s</text>
+      <path d="M488,82 C530,120 610,130 648,166" class="wire acc" marker-end="url(#a1b)"/>
+      <text x="566" y="112" class="small">stick commands over Wi-Fi</text>
+      <line x1="790" y1="180" x2="868" y2="170" class="wire acc" marker-end="url(#a1b)"/>
+      <text x="800" y="160" class="small mono">I2C</text>
+      <line x1="955" y1="208" x2="955" y2="234" class="wire acc" marker-end="url(#a1b)"/>
+      <line x1="700" y1="304" x2="700" y2="262" class="wire wrongc" marker-end="url(#a1o)"/>
+      <text x="708" y="290" class="small" style="fill:#c2410c">push = takeover</text>
+    </svg>

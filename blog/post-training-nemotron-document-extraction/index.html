@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Training Nemotron to Beat GPT‑6 Luna on Document Extraction · Urjit</title>
+    <meta name="author" content="Urjit Chakraborty" />
+    <meta name="description" content="Rudimint post-trained Nemotron to score 42.1 on ExtractBench Pro, up from 31.2 and ahead of GPT-6 Luna’s 31.7." />
+    <script>
+      // Posts are for reading, so they're never red: Light or Dark if picked on the homepage,
+      // otherwise the system's (src/pages/post.css).
+      try {
+        const saved = localStorage.getItem('theme')
+        const theme = saved === 'light' || saved === 'dark' ? saved : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = theme
+        const meta = document.createElement('meta')
+        meta.name = 'theme-color'
+        meta.content = theme === 'dark' ? '#121212' : '#faf9f6'
+        document.head.append(meta)
+      } catch {}
+    </script>
+    <meta name="color-scheme" content="light dark" />
+    <link rel="canonical" href="https://urjit.me/blog/post-training-nemotron-document-extraction/" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Urjit" />
+    <meta property="og:url" content="https://urjit.me/blog/post-training-nemotron-document-extraction/" />
+    <meta property="og:title" content="Training Nemotron to Beat GPT‑6 Luna on Document Extraction" />
+    <meta property="og:description" content="Rudimint post-trained Nemotron to score 42.1 on ExtractBench Pro, up from 31.2 and ahead of GPT-6 Luna’s 31.7." />
+    <meta property="og:image" content="https://urjit.me/og.png" />
+    <meta property="article:published_time" content="2026-10-26" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:creator" content="@urjit_" />
+
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/pages/post.css" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body class="post-page">
+    <main>
+      <a class="post-back" href="/">← Home</a>
+      <article class="post">
+        <header class="post-header">
+          <p class="post-meta"><time datetime="2026-10-26">Oct 26, 2026</time></p>
+          <h1 class="post-title">Training Nemotron to Beat GPT‑6 Luna on Document Extraction</h1>
+          <p class="post-meta"><a href="https://www.linkedin.com/in/urjitc/" target="_blank" rel="noopener noreferrer">Urjit Chakraborty</a> · <a href="https://www.linkedin.com/in/ibraheemshaikh/" target="_blank" rel="noopener noreferrer">Ibraheem Shaikh</a></p>
+          <p class="post-meta">Originally published on <a href="https://rudimint.com/blog/post-training-nemotron-document-extraction" target="_blank" rel="noopener noreferrer">Rudimint</a></p>
+        </header>
+        <div class="post-body">
+<h2>Summary</h2>
+<ul><li>Rudimint post-trained Nemotron to score <strong>42.1 on ExtractBench Pro, up from 31.2 and ahead of GPT-6 Luna’s 31.7</strong>.</li><li>In the large majority of ExtractBench Pro documents, most answers must be worked out from rules, tables and drawings. In our work, the model does this in one call per document, with no tools or agent loop.</li><li>Rudimint built <strong>23 synthetic business worlds</strong> where code and SQL deterministically create each document and answer key. It trained on 664 worked solutions and on no ExtractBench Pro documents.</li></ul>
+<figure class="post-bars"><div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Rudimint post-trained Nemotron</span><span class="post-bar-value">42.1</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:84.2%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">GPT-6 Luna</span><span class="post-bar-value">31.7</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:63.4%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Nemotron, before training</span><span class="post-bar-value">31.2</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:62.4%"></div>
+</div>
+</div>
+<figcaption>ExtractBench Pro value F1 across all 100 documents, using one model call per document.</figcaption></figure>
+<h2>Background</h2>
+<p><a href="https://www.llamaindex.ai/blog/introducing-extractbench-pro" target="_blank" rel="noopener noreferrer">ExtractBench Pro</a> tests more than just parsing: its 100 documents ask models to calculate amounts, apply rules, follow diagrams, and reason across pages. Consider an insurance packet with forty claims, a policy, and a letter near the end that changes an earlier deductible. The model must match each claim to its policy, decide which version applies, calculate the payment, and return every row. Reading every word on the page correctly does not guarantee any of those steps, and one wrong interpretation can change dozens of answers.</p>
+<p>This is difficult even for capable models. In our initial single-call evaluations, open-weight <a href="https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16" target="_blank" rel="noopener noreferrer">Nemotron</a> and GPT-6 Luna scored almost the same. We wanted to improve that single-call setup, teaching the model to do the work a document requires without adding tools at inference time.</p>
+<p>Of the 68.8 points Nemotron lost, misapplying rules and other wrong computed values cost about 35.4, giving up on values that had to be calculated at least 15.8, and stopping before every row was written 13.2.</p>
+<h2>Synthetic data</h2>
+<h3>Building worlds</h3>
+<p>We used ExtractBench Pro to understand where Nemotron failed, then built synthetic documents that exercised those skills. ExtractBench Pro documents and answers were not included in the training set.</p>
+<p>We sorted Nemotron’s failures into a taxonomy of five types: giving up on computed values, misapplying rules, stopping before every row, failing to trace a drawing, and mapping another party’s terms to house categories. Worlds were chosen from a grid of those failures and the rule kinds ExtractBench Pro uses, and a coverage table shows which mechanics are thin. Many of the rule mechanics started from real contracts and policies: we mined patterns from commercial leases, credit agreements, health plans and labor rules, each tied to the failure it trains.</p>
+<p>Each synthetic <strong>world</strong> is an invented business: a grain co-op, a ferry operator, a hospital payroll office, or a lease auditor. We build its records in <a href="https://duckdb.org/" target="_blank" rel="noopener noreferrer"><strong>DuckDB</strong></a>, an embedded SQL database. Code samples the people, transactions, dates, rates, and relationships; SQL queries apply the business rules and compute the answers. Agents write each world’s code and wording on a shared kit, and a fresh reader and an automatic audit check the result; code, not a model, supplies every value.</p>
+<p>The same records and rules become the paperwork: tables, policy text, amendment notices, charts, and drawings. A rule may appear several pages after the table it changes. Superseded figures remain visible. Related records may be split across pages. The model sees the document and requested answer schema, not the database or SQL.</p>
+<p>Each document comes from a seed, so it can be rebuilt, and every value lives in one place, so a table and a rule cannot disagree.</p>
+<div class="post-figure-row"><figure class="post-figure"><img src="/blog/post-training-nemotron-document-extraction/ownership-detail.jpg" alt="Part of a group structure chart with crossing ownership lines" loading="lazy" width="1750" height="1100" decoding="async"><figcaption>A synthetic group ownership chart: one sheet of several.</figcaption></figure>
+<figure class="post-figure"><img src="/blog/post-training-nemotron-document-extraction/wells.jpg" alt="One well’s gamma and resistivity curves beside coloured rock layers" loading="lazy" width="2000" height="1283" decoding="async"><figcaption>A synthetic well log, from a section about 13,000 pixels wide.</figcaption></figure>
+</div>
+<h3>Learning from real world documents</h3>
+<p>To make the documents look like real work, we studied real ones. Agents harvested 632 public PDFs on the web across families such as planning, energy, finance and construction, aimed at real paperwork with rules and pictures, not brochures or templates.</p>
+<p>To sort them we used Clef, Cloudflare’s Jev-like decision model. Clef answered 27 questions about each page: what kind of page it is, whether it is filled in, legible and sensitive. SigLIP 2 page embeddings found near-copies of the same template. Of 889 documents, 642 stayed, after dropping blank forms, brochures and near-copies.</p>
+<p>We use this pool for structure, and it shaped how documents open, where rules sit, which contents pages and signature blocks they carry, and 100 house styles, each modeled on a real document.</p>
+<h3>Scans, handwriting and pictures</h3>
+<p>Most ExtractBench Pro pages are not clean PDFs: 60 documents are scans, and 22 carry hidden text layers that disagree with the page. Ours follow a similar mix of digital, scanned and image-only pages. A scan gets faded toner, uneven paper, skew, blur, grain and JPEG artefacts. Tesseract then reads the damaged page to make the hidden text, so its OCR errors are real and the image stays the authority.</p>
+<p>Some worlds add handwritten notes, corrected figures, strike-throughs and rubber stamps. Digits stay clear: the skill is noticing a mark and applying it. Charts and drawings are images with no text layer, and every value on them can be read from a label or gridline.</p>
+<div class="post-figure-row"><figure class="post-figure"><img src="/blog/post-training-nemotron-document-extraction/scan-before.jpg" alt="A sales table as printed, crisp and clean" loading="lazy" width="2020" height="220" decoding="async"><figcaption>Before: a synthetic page as generated.</figcaption></figure>
+<figure class="post-figure"><img src="/blog/post-training-nemotron-document-extraction/scan-after.jpg" alt="The same table after scan damage" loading="lazy" width="2020" height="220" decoding="async"><figcaption>After: the same page scanned.</figcaption></figure>
+</div>
+<div class="post-table-wrap"><table><thead><tr><th>On the page</th><th>In the hidden text, from OCR</th></tr></thead><tbody><tr><td>$694.87</td><td>$694:87</td></tr><tr><td>$7,399.70</td><td>$7,399:70</td></tr></tbody></table>
+</div>
+<figure class="post-figure post-figure--narrow"><img src="/blog/post-training-nemotron-document-extraction/stamp-detail.jpg" alt="A handwritten signature, notary signature and red notary stamp" loading="lazy" width="689" height="473" decoding="async"><figcaption>Handwriting and a stamp on a synthetic payment application.</figcaption></figure>
+<h3>Computed answer keys</h3>
+<p>That gives us a document to read and a computed answer key from the same underlying case.</p>
+<p>We also encode plausible mistakes: using an old rate, copying a decoy total, or joining tables by row position instead of identity. The generator checks whether these wrong paths change the answer and plants cases around thresholds. This makes the difficulty deliberate, rather than simply adding more pages.</p>
+<p>Every printed rule is tested for whether it changes an answer. The key must score 100 on our grader, an empty answer about 0, and every planted wrong path less than 100. Documents must be hard for Nemotron but still solvable.</p>
+<p>Code can still be wrong, and a correct query can disagree with a poorly worded rule. Read-throughs caught ambiguous rounding instructions, cramped drawings, and faulty joins. We corrected those in the generator so the fix applied to future documents too.</p>
+<ol><li><p>Sample the records</p>
+<pre><code>tenant: Boxley Jewelers
+breakpoint type: Artificial
+rate: 4.0%
+stated breakpoint: $230,000
+counted sales: $309,505.63</code></pre>
+</li><li><p>Compute the answer in SQL</p>
+<pre><code>SELECT round(
+     greatest(counted - breakpoint, 0)
+     * rate * 0.01, 2) AS pct_rent
+FROM gross JOIN bp JOIN leases</code></pre>
+</li><li><p>Print the paperwork, with the rule 33 pages after the lease terms</p>
+<div class="post-figure-row"><figure class="post-figure"><img src="/blog/post-training-nemotron-document-extraction/lease-abstract-detail.jpg" alt="Lease abstract rows including Boxley Jewelers" loading="lazy" width="1470" height="310" decoding="async"><figcaption>A synthetic lease abstract, page 2 of 40.</figcaption></figure>
+<figure class="post-figure"><img src="/blog/post-training-nemotron-document-extraction/lease-rule-detail.jpg" alt="The percentage rent rules" loading="lazy" width="1120" height="700" decoding="async"><figcaption>The rules, on an image-only page.</figcaption></figure>
+</div>
+</li><li><p>Check that wrong readings lose</p>
+<div class="post-table-wrap"><table><tbody><tr><td>Rate on all sales</td><td>$12,380.23</td></tr><tr><td>Reported sales as counted</td><td>$4,761.39</td></tr><tr><td>Sales tax left in</td><td>$4,214.40</td></tr><tr><td>Returns left in</td><td>$3,699.94</td></tr></tbody></table>
+</div>
+</li><li><p>Keep the answer key</p>
+<pre><code>&quot;breakpoint&quot;: 230000,
+&quot;percentage_rent&quot;: 3180.23</code></pre>
+<p>4% of ($309,505.63 − $230,000) is $3,180.23.</p>
+</li></ol>
+<h2>Training</h2>
+<p><a href="https://huggingface.co/moonshotai/Kimi-K3" target="_blank" rel="noopener noreferrer">Kimi K3</a> was the teacher: it solved the synthetic documents and showed its working. The selected solutions matched their answer keys exactly. Near misses were reviewed against the document and corrected where appropriate; a matching final answer alone does not establish that every intermediate step is sound.</p>
+<p>Solutions stayed balanced across each world’s difficulty, document kinds and answer shapes.</p>
+<p>Some chart reads needed extra help, so the teacher received chart values at the precision readable from the page. The student received only the document, without that aid.</p>
+<p>Nemotron was then trained with supervised fine-tuning on <a href="https://thinkingmachines.ai/tinker/" target="_blank" rel="noopener noreferrer">Tinker</a>. Each example contained the page images, text layer, and schema, followed by the teacher’s working and JSON answer.</p>
+<h2>Results</h2>
+<p>Across all 100 documents, Nemotron rose from 31.2 to 42.1, a gain of about 11 points. Value F1 compares each answer value with the key, balancing values missed against values wrongly given, and every document counts equally.</p>
+<p>Across documents, the 95% interval on the gain is 7.9 to 14.4. GPT-6 Luna scored 31.7 in one call at about $0.013 per document; our trained run cost about $0.12 per document on Tinker, and training cost about $121. On 30 synthetic documents from worlds held out of training, the score rose from 66.1 to 73.8.</p>
+<figure class="post-bars"><div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Document conventions<span class="post-bar-sub"> (22)</span></span><span class="post-bar-value">48.2 → 71.4</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:71.4%"></div>
+<div class="post-bar-from" style="width:48.2%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">House vocabulary<span class="post-bar-sub"> (14)</span></span><span class="post-bar-value">48.3 → 62.8</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:62.8%"></div>
+<div class="post-bar-from" style="width:48.3%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Charts in documents<span class="post-bar-sub"> (25)</span></span><span class="post-bar-value">26.7 → 35.5</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:35.5%"></div>
+<div class="post-bar-from" style="width:26.700000000000003%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Drawn relations<span class="post-bar-sub"> (20)</span></span><span class="post-bar-value">25.3 → 28.7</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:28.7%"></div>
+<div class="post-bar-from" style="width:25.3%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">House counting rules<span class="post-bar-sub"> (12)</span></span><span class="post-bar-value">12.4 → 16.9</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:16.9%"></div>
+<div class="post-bar-from" style="width:12.4%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Long chart sheets<span class="post-bar-sub"> (7)</span></span><span class="post-bar-value">8.7 → 14.4</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:14.400000000000002%"></div>
+<div class="post-bar-from" style="width:8.7%"></div>
+</div>
+</div>
+<figcaption>Mean value F1 by category, with the number of documents in brackets. The light bar is before training and the dark extension is the gain. Every category rose, but charts, drawn relations and counting stay low.</figcaption></figure>
+<figure class="post-figure"><img src="/blog/post-training-nemotron-document-extraction/policy-rule.jpg" alt="Scanned appendix clause A.5 limiting insured interest to the lower of the contract rate or a market rate" loading="lazy" width="1462" height="110" decoding="async"></figure>
+<div class="post-table-wrap"><table><thead><tr><th>Shipment</th><th>Contract rate</th><th>Before</th><th>After</th><th>Key</th></tr></thead><tbody><tr><td>BW-25-0102</td><td>9.00%</td><td>9.0</td><td>7.0</td><td>7.0</td></tr><tr><td>BW-25-0107</td><td>17.00%</td><td>12.0</td><td>7.0</td><td>7.0</td></tr></tbody></table>
+</div>
+<small>Clause A.5 from the last page of a scanned 49-page ExtractBench Pro document, and two of its 419 shipments. Insured interest rate correct: 90, 5 and 206 of 419 on three reads before, 416 and 380 on two reads after. The earlier reads often stopped short of the full list. These rows are from one read of each model.</small>
+<h2>Conclusion</h2>
+<p>Building the business data and rules first let us create difficult examples with checkable answers; worked solutions supplied the steps between the page and those answers.</p>
+<p>Next, we will add reinforcement learning on top of this model, so it can improve directly against the answer keys. We will also extend the synthetic worlds toward what it still finds hardest: charts, drawn relationships, counting rules and very long documents. Then we will test whether the method transfers to customer workflows.</p>
+<h2>References</h2>
+<ol class="post-footnotes"><li>LlamaIndex. <a href="https://www.llamaindex.ai/blog/introducing-extractbench-pro" target="_blank" rel="noopener noreferrer">Introducing ExtractBench Pro</a>, 2026. Benchmark design.</li><li>LlamaIndex. <a href="https://huggingface.co/datasets/llamaindex/ExtractBenchPro" target="_blank" rel="noopener noreferrer">ExtractBench Pro dataset</a>, 2026. Documents and answer keys.</li><li>LlamaIndex. <a href="https://github.com/run-llama/ExtractBench" target="_blank" rel="noopener noreferrer">ExtractBench: benchmark code and official scorer</a>. Used at commit <code>56b8fdd</code>.</li><li>NVIDIA. <a href="https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16" target="_blank" rel="noopener noreferrer">Nemotron 3.5 Super VL Model Card</a>, 2026. Base-model architecture and specifications.</li><li>Moonshot AI. <a href="https://huggingface.co/moonshotai/Kimi-K3" target="_blank" rel="noopener noreferrer">Kimi K3 Model Card</a>, 2026. Teacher model.</li><li>Thinking Machines. <a href="https://thinkingmachines.ai/tinker/" target="_blank" rel="noopener noreferrer">Tinker</a>. Training and sampling.</li></ol>
+        </div>
+      </article>
+      <footer class="footer">
+        <a href="/">Home</a>
+        <a href="https://github.com/urjitc" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/in/urjitc" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/urjit_" target="_blank" rel="noopener noreferrer">X</a>
+        <a href="mailto:urjitc@gmail.com">Email</a>
+      </footer>
+    </main>
+  </body>
+</html>

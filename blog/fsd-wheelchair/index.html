@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Building an FSD wheelchair with a post-trained model · Urjit</title>
+    <meta name="author" content="Urjit Chakraborty" />
+    <meta name="description" content="We added full self-driving to an electric wheelchair, for about 1% of the price of one that ships with it." />
+    <script>
+      // Posts are for reading, so they're never red: Light or Dark if picked on the homepage,
+      // otherwise the system's (src/pages/post.css).
+      try {
+        const saved = localStorage.getItem('theme')
+        const theme = saved === 'light' || saved === 'dark' ? saved : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = theme
+        const meta = document.createElement('meta')
+        meta.name = 'theme-color'
+        meta.content = theme === 'dark' ? '#121212' : '#faf9f6'
+        document.head.append(meta)
+      } catch {}
+    </script>
+    <meta name="color-scheme" content="light dark" />
+    <link rel="canonical" href="https://urjit.me/blog/fsd-wheelchair/" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Urjit" />
+    <meta property="og:url" content="https://urjit.me/blog/fsd-wheelchair/" />
+    <meta property="og:title" content="Building an FSD wheelchair with a post-trained model" />
+    <meta property="og:description" content="We added full self-driving to an electric wheelchair, for about 1% of the price of one that ships with it." />
+    <meta property="og:image" content="https://urjit.me/blog/fsd-wheelchair/demo-poster.jpg" />
+    <meta property="article:published_time" content="2026-11-16" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:creator" content="@urjit_" />
+
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/pages/post.css" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body class="post-page">
+    <main>
+      <a class="post-back" href="/">← Home</a>
+      <article class="post">
+        <header class="post-header">
+          <p class="post-meta"><time datetime="2026-11-16">Nov 16, 2026</time></p>
+          <h1 class="post-title">Building an FSD wheelchair with a post-trained model</h1>
+          <p class="post-meta"><a href="https://www.linkedin.com/in/ibraheemshaikh/" target="_blank" rel="noopener noreferrer">Ibraheem Shaikh</a> · <a href="https://www.linkedin.com/in/yaseen-moustafa-120967279/" target="_blank" rel="noopener noreferrer">Yaseen Moustafa</a> · <a href="https://www.linkedin.com/in/adamzeineldin/" target="_blank" rel="noopener noreferrer">Adam Zeineldin</a> · <a href="https://www.linkedin.com/in/urjitc/" target="_blank" rel="noopener noreferrer">Urjit Chakraborty</a></p>
+          <p class="post-meta">Originally published on <a href="https://ishaikh.com/blog/fsd-wheelchair" target="_blank" rel="noopener noreferrer">Ibraheem’s blog</a></p>
+        </header>
+        <div class="post-body">
+<p>Last weekend we added Full Self Driving (FSD) to an electric wheelchair. We built this on a single <a href="https://www.arduino.cc/product-uno-q/" target="_blank" rel="noopener noreferrer">Arduino UNO Q</a>; a private mesh network; a post-trained robotics AI model (<a href="https://omnivla-nav.github.io/" target="_blank" rel="noopener noreferrer">OmniVLA</a>) where we curated data utilizing Google Deepmind’s <a href="https://deepmind.google/models/gemini-robotics/embodied-reasoning/" target="_blank" rel="noopener noreferrer">ER 2 model</a>; and ontop of a familiar, simple user interface, designed for people with disabilities or the elderly.</p>
+<figure class="post-figure"><video src="/blog/fsd-wheelchair/demo.mp4" poster="/blog/fsd-wheelchair/demo-poster.jpg" controls playsinline preload="metadata"></video></figure>
+<h2>Functionalities</h2>
+<p>The wheel chair navigates fully autonomously both indoors and outdoors. Using a simple iPad interface a user can simply speak where they want to go (an address or even &quot;take me to the bathroom&quot;).</p>
+<p>The three main functionalities are:</p>
+<ol>
+<li><strong>Summon</strong></li>
+</ol>
+<p>If a user is physically separated from the wheelchair. They press a summon button on their iPad. The gps unit on the wheelchair navigates around objects and places itself at a convenient location for the user to mount it.</p>
+<ol start="2">
+<li><strong>Indoor navigation</strong></li>
+</ol>
+<p>Using natural language (i.e. &quot;take me to the blue sofa&quot;) via voice or type we identify a target in the view or explore the area until the target is found. The wheelchair carefully navigates to the target and ends the ride once it’s at a convenient dismount location.</p>
+<ol start="3">
+<li><strong>Outdoor navigation</strong></li>
+</ol>
+<p>Using type or voice name any location within a 0.5 mile radius, we build off of a Google Maps API for walk/bike routing. The camera navigates towards the destination, avoiding obstacles, and exercising caution (looking both ways, waiting for road cross signal, etc.) to arrive to the destination.</p>
+<p>The camera feed is streamed from a phone mounted onto the wheelchair. The main user interface is via the handheld iPad which allows for target intake, trip observation, and manual override. The physical joyride also serves as an emergency failsafe.</p>
+<p>Wheelchairs like these can cost upwards of $30,000 and all in we built this FSD wheelchair for roughly 1% of that cost.</p>
+<aside class="post-aside"><p>The rest of this post is a technical read: about our methodology, experiments, and results. <a class="post-jump" href="#tidbits">Scroll to the bottom for some fun tidbits xD</a></p>
+</aside>
+<h2>Interacting with the chair</h2>
+<p>Our first guess was that the stick was an analog voltage but after testing with a multimeter we ruled that out. The second problem was that the chair speaks its protocol with a timing quirk that the Arduino’s built-in hardware refuses, so the chair would beep at us, detecting a foreign device.</p>
+<p>We ended up reverse engineering the protocol for the Chinese hardware in C++, we continually iterated, tweaked our approach, (and grew tired of the constant beeping) until we emulated the <a href="https://www.melexis.com/en/product/mlx90393/triaxis-micropower-magnetometer" target="_blank" rel="noopener noreferrer">small magnetic sensor</a> that the chair polls about 400 times a second.</p>
+<p>In the end, we didn’t have to cut or solder anything which means that the joystick still completely works and the FSD is non-invasive to the chair and easy to revert.</p>
+<div class="post-figure-row post-figure-row--crop"><figure class="post-figure"><img src="/blog/fsd-wheelchair/chair-listing.jpg" alt="Product photo of the folding power wheelchair we started from" loading="lazy" width="940" height="1254" decoding="async"><figcaption><a href="https://www.culvermobility.com/products/wolf-brown-folding-electric-wheelchair" target="_blank" rel="noopener noreferrer">The original chair.</a></figcaption></figure>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/joystick_opened.jpg" alt="The joystick housing opened up" loading="lazy" width="1000" height="750" decoding="async"><figcaption>Inside the joystick.</figcaption></figure>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/sensor.jpg" alt="A small round circuit board with one chip and four labelled pins" loading="lazy" width="1000" height="750" decoding="async"><figcaption>The magnetic sensor under the stick.</figcaption></figure>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/arduino_in_chair.jpg" alt="An Arduino wired into the chair" loading="lazy" width="750" height="1000" decoding="async"><figcaption>The Arduino, answering as that sensor.</figcaption></figure>
+</div>
+<p>Everything else hangs off a private mesh network (using <a href="https://tailscale.com" target="_blank" rel="noopener noreferrer">Tailscale</a>): the iPhone strapped to the chair streams camera, gyro, and GPS; a model decides where to go; a backend server turns those decisions into stick commands; and an iPad is the rider’s screen.</p>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/system.svg" alt="Diagram of the phone, model, Arduino and iPad" loading="lazy" width="1060" height="380" decoding="async"></figure>
+<h2>Building the model</h2>
+<p>We started with public benchmarks and ran tests for out-the-box robotics AI models making decisions for our wheelchair’s movements, and we finally landed on <a href="https://omnivla-nav.github.io/" target="_blank" rel="noopener noreferrer">OmniVLA</a> for it’s unique ability to work both indoors and outdoors, and to take plain language as its goal. OmniVLA’s size was also convenient for latency since we needed quick responses and to build an agent harness around that (on a rented A10 through <a href="https://modal.com" target="_blank" rel="noopener noreferrer">Modal</a> it answers about four times a second). Every answer gives us eight waypoints which can dictate the next few seconds of movement but we run a new model call for every ~28cm of movement.</p>
+<p>OmniVLA worked well out of the box but still had 3 large issues.</p>
+<ul>
+<li><strong>Understanding Wheelchair Size.</strong> OmniVLA learned on small robots. Our camera sits 28 cm off the floor on the chair’s front-left corner, and there’s chair to the right of it. It’s possible to bake this understanding into the harness but it’s much less effective as compared to baking it into the model’s actual weights through post-training.</li>
+<li><strong>Ability for a rider to dismount.</strong> For our use case, the wheelchair needs to stop at a location convenient enough for the rider to dismount or mount effectively. OmniVLA out of the box would stop once the target is within complete view, not where the rider could dismount.</li>
+<li><strong>Memory.</strong> Since the model only sees in single frames, after steering around the box, once it could no longer see it, it would steer right back into it.</li>
+</ul>
+<p>The model also has no context between frames, so if the chair moves too far between two calls, the next frame confuses it.</p>
+<h2>Experiment 1: use an LLM to drive</h2>
+<p>The quickest way to find out whether these were perception problems or policy problems was to swap the policy. We gave Claude the camera picture and a handful of moves: forward up to a meter at a time, back a little, turn on the spot up to 120°. We gave the model harness context on the size, where the camera sits relevant to the centerline, and also built memory of the whole conversation so it knows what steps were taken previously.</p>
+<p>The LM understood the scene better than OmniVLA, but it was a poor driver. Every step was slow (2-3s) so the chair would move in stop-and-go steps. Haiku was a little faster and no better at distance. Extended thinking did not help.</p>
+<h2>Experiment 2: calibrate the frame of view (fov)</h2>
+<p><a href="https://deepmind.google/models/gemini-robotics/embodied-reasoning/" target="_blank" rel="noopener noreferrer">Gemini Robotics-ER 2</a> is built to point at things in an image, so we used tape to draw parking-camera guidelines in order to calibrate the model (where the chair’s two sides will pass, with marks at 0.5, 1 and 2 m) and a fan of up to seven numbered paths, from 60° left to 60° right in 20° steps.</p>
+<p>With that the chair’s footprint becomes concrete in the input the model receives and every step can be calibrated for the actual depth in the frame.</p>
+<h2>Experiment 3: let the model draw the route</h2>
+<p>We finally split the decision into two parts, Gemini decides only <em>where</em> to go by marking the goal and drawing a route as a few points on the floor. The agent harness drives the chair by fitting the route to the floor using the depth of the phone camera and continues to follow it between model responses. The harness also measures the chair’s turns using the phone’s gyro.</p>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/route-comparison.jpg" alt="The same camera frame three times, each with a route drawn by a different model towards the stairs behind an ottoman" loading="lazy" width="1960" height="414" decoding="async"><figcaption>Three models asked to draw a route to the stairs. Gemini Robotics-ER 2 goes around the ottoman in 3.4 s. Claude Sonnet heads for the wrong side. Gemini 3.8 Flash gets there, in 15 s.</figcaption></figure>
+<div class="post-figure-row"><figure class="post-figure"><img src="/blog/fsd-wheelchair/raw-box.jpg" alt="A low camera view down a corridor with a cardboard box ahead" loading="lazy" width="480" height="270" decoding="async"><figcaption>What the phone sees.</figcaption></figure>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/route-box.jpg" alt="The same view with guide lines, a goal ring and three numbered route points leading to the box" loading="lazy" width="960" height="540" decoding="async"><figcaption>What Gemini is shown, with its answer drawn on: three route points up to the box.</figcaption></figure>
+</div>
+<p>The whole answer is a small piece of JSON, with points as fractions of the picture:</p>
+<pre><code class="language-json">{
+  &quot;scene&quot;: &quot;The cardboard box is straight ahead in the corridor, about two meters away.&quot;,
+  &quot;goal_visible&quot;: true,
+  &quot;goal&quot;: [580, 595],
+  &quot;action&quot;: &quot;route&quot;,
+  &quot;route&quot;: [[740, 608], [640, 598], [595, 590]],
+  &quot;note&quot;: &quot;Approaching the cardboard box directly to stop right in front of it.&quot;
+}
+</code></pre>
+<p>We also made the model write a one-line <code>note</code> to its later self, outlining what was asked for and what the chair did: “asked left 30°, gyro measured left 21°”. And once the goal is marked the harness remembers it (reference the image below.</p>
+<div class="post-figure-row"><figure class="post-figure"><img src="/blog/fsd-wheelchair/dark-goal.jpg" alt="A black camera frame with guide lines and a magenta goal ring" loading="lazy" width="960" height="540" decoding="async"><figcaption>Camera blocked, goal remembered. Gemini: “The image is completely dark, but the goal is marked to the left by the magenta ring.”</figcaption></figure>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/arrived-box.jpg" alt="The cardboard box filling the view, right in front of the chair" loading="lazy" width="960" height="540" decoding="async"><figcaption>“The cardboard box is right in front of the chair.” Arrived.</figcaption></figure>
+</div>
+<p>This was the first driver that reached a named thing reliably: the bottom of the stairs around an ottoman in 37 seconds, a person in 12, a rocking chair in 14.</p>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/four-looks.jpg" alt="Four camera frames approaching a rocking chair, each with a short green route and a magenta goal ring" loading="lazy" width="1608" height="908" decoding="async"><figcaption>Gemini’s four looks on the way to the rocking chair. Green is the route it drew each time; the ring is the goal that the harness remembered.</figcaption></figure>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/driven-paths.png" alt="Three top-down plots of the chair’s driven path, each two to three metres long" loading="lazy" width="1340" height="706" decoding="async"><figcaption>The three runs from above: stairs around the ottoman (37 s), a person (12 s), the rocking chair (14 s). White is where the chair drove, green dashes are Gemini’s routes on the floor, amber is where it stopped.</figcaption></figure>
+<p>It was also slow to think. On the run to the cardboard box, Gemini’s five looks took 13.0, 4.9, 3.7, 3.0 and 2.6 seconds.</p>
+<figure class="post-bars"><div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">OmniVLA<span class="post-bar-sub"> on an A10</span></span><span class="post-bar-value">~0.25 s</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:1.9230769230769231%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Gemini Robotics-ER 2<span class="post-bar-sub"> warm, low thinking</span></span><span class="post-bar-value">2.6–4.9 s</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:23.076923076923077%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Gemini Robotics-ER 2<span class="post-bar-sub"> first look</span></span><span class="post-bar-value">13.0 s</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:100%"></div>
+</div>
+</div>
+<figcaption>Seconds per decision. OmniVLA returns a response when the model moves ~28cm; due to latency, Gemini’s response is on a picture that’s already old.</figcaption></figure>
+<h2>How the harness drives</h2>
+<ul>
+<li><strong>Depth without LiDAR</strong>, We use <a href="https://github.com/DepthAnything/Depth-Anything-V2" target="_blank" rel="noopener noreferrer">Depth Anything V2</a>, by calibrating scale it can accurately (for our purposes) dictate depth on an image without LiDAR.</li>
+<li><strong><a href="https://en.wikipedia.org/wiki/Pure_pursuit" target="_blank" rel="noopener noreferrer">Pure pursuit</a></strong>. We steer the chair on the arc that passes through a distant point and we adjust the chair to move slower along tight arcs so the rider isn’t forced sharply on the chair.</li>
+<li><strong>Memory</strong>. We mapped out 15cm (radius) cells so that obstacles became clusters in the harness’s memory.</li>
+<li><strong>Turns</strong>. Using the phone’s gyro we have a check to estimate how far the chair turned on-top of the intention based on wheel speed.</li>
+</ul>
+<figure class="post-figure post-figure--narrow"><img src="/blog/fsd-wheelchair/calibration.jpg" alt="A camera frame of a floor with a taped rectangle, overlaid with red and green outlines" loading="lazy" width="960" height="540" decoding="async"><figcaption>Checking the camera model against tape on the floor. Green is the fitted model, landing on the tape; at 0.84 m the depth estimate is about 3 cm off.</figcaption></figure>
+<h2>Turning the teacher’s drives into data</h2>
+<p>This work is similar to what Urjit and I do at <a href="https://rudimint.com" target="_blank" rel="noopener noreferrer">Rudimint</a>, with the difference being: you cannot generate physical data by running a script overnight. Every bit of training data requires the actual wheelchair to move in the physical world so our first step was to build structure for the data collection loop.</p>
+<ul>
+<li><strong>Episodes.</strong> Every run gets logged with gyro reading, command and corresponding camera frame, believed position, actual position, etc. We also hand curate &quot;golden&quot;/perfect solutions for each run.</li>
+<li><strong>Every failure has justification.</strong> For example “obstacle 0.4 m ahead”, “asked left 30°, got 21°”, “gyro went quiet”.</li>
+<li><strong>Auto QA.</strong> If the camera or the gyro was stale for part of a run, the episode is marked unusable and we never used it for training.</li>
+</ul>
+<figure class="post-bars"><div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Route driven to its end</span><span class="post-bar-value">22</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:100%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Turn completed</span><span class="post-bar-value">18</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:81.81818181818183%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Turn stuck: stick held, chair not rotating</span><span class="post-bar-value">12</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:54.54545454545454%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Route replaced by a newer one mid-drive</span><span class="post-bar-value">7</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:31.818181818181817%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Stopped for an obstacle</span><span class="post-bar-value">3</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:13.636363636363635%"></div>
+</div>
+</div>
+</figure>
+<p>We post-trained on curated driving data from hand driven runs and from Gemini Robotics-ER 2.</p>
+<p>Using SFT OmniVLA learned waypoints (given a single frame and the task, where is the chair going to be over the next 8/3s of a second).</p>
+<figure class="post-figure-group"><div class="post-figure-row"><figure class="post-figure"><img src="/blog/fsd-wheelchair/sample-person.jpg" alt="A camera frame with a person standing ahead and an orange path of five points on the floor" loading="lazy" width="960" height="626" decoding="async"></figure>
+<figure class="post-figure"><img src="/blog/fsd-wheelchair/sample-chair.jpg" alt="A camera frame of a room with a rocking chair and an orange path of five points on the floor" loading="lazy" width="960" height="626" decoding="async"></figure>
+</div>
+<figcaption>An annotated training sample. Task definition + (in orange) where the chair actually went for the next 2.7s)</figcaption></figure>
+<h2>Post-training</h2>
+<p>We used OmniVLA’s training script for our recipe:</p>
+<ul>
+<li><strong><a href="https://arxiv.org/abs/2106.09685" target="_blank" rel="noopener noreferrer">LoRA</a></strong> at rank 32 (α 16) on every linear layer, with the action head and the goal projector trained in full.</li>
+<li><strong>Loss:</strong> waypoint MSE plus a small smoothness term (0.1).</li>
+<li><strong>Optimiser:</strong> AdamW at a learning rate of 1e-4.</li>
+<li><strong>Schedule:</strong> 300 steps at batch size 8 on one 80 GB GPU on Modal, about five minutes.</li>
+</ul>
+<p>Training and driving are both in a single forward pass.</p>
+<h2>Evals, three ways</h2>
+<p><strong>Held-out.</strong> We hold out a contiguous slice from the middle of each drive.</p>
+<figure class="post-bars"><div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Original OmniVLA</span><span class="post-bar-value">0.40 m</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:100%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Always stand still</span><span class="post-bar-value">0.28 m</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:68.81188118811882%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Post-trained OmniVLA</span><span class="post-bar-value">0.11 m</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:26.48514851485148%"></div>
+</div>
+</div>
+<figcaption>Path error at the last waypoint on held-out frames, best post-trained checkpoint. Lower is better.</figcaption></figure>
+<p>So we ultimately achieved 3.7× lower error than the original. Heading error fell from 4.6° to 1.9°, and average error across all eight waypoints from 0.35 m to 0.09 m.</p>
+<p><strong>Blind replay.</strong> We replayed 49 recorded frames through every driver we had, and reduced each answer to one plain first action, and handed a separate Claude Opus judge the frame with the actions as A, B, C in shuffled order. We obfuscated model names and removed reasoning.</p>
+<figure class="post-bars"><div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Claude Sonnet<span class="post-bar-sub"> 3.0 s</span></span><span class="post-bar-value">0.99</span></div>
+<div class="post-bar-track"><div class="post-bar-fill is-strong" style="width:100%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Claude Sonnet, thinking<span class="post-bar-sub"> 2.9 s</span></span><span class="post-bar-value">0.96</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:96.96969696969697%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Claude Haiku<span class="post-bar-sub"> 2.5 s</span></span><span class="post-bar-value">0.90</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:90.90909090909092%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Claude Haiku, thinking<span class="post-bar-sub"> 2.4 s</span></span><span class="post-bar-value">0.87</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:87.87878787878788%"></div>
+</div>
+</div>
+<div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">OmniVLA (original)<span class="post-bar-sub"> 0.25 s</span></span><span class="post-bar-value">0.50</span></div>
+<div class="post-bar-track"><div class="post-bar-fill" style="width:50.505050505050505%"></div>
+</div>
+</div>
+<figcaption>Blind-judged first actions on the same 49 frames, with median seconds per decision.</figcaption></figure>
+<p>The slow models started off with much better accuracy so to squeeze that performance into the smaller model we used distillation.</p>
+<h2>What we took from it</h2>
+<ul>
+<li>Harnesses remain as essential for robotics models as they are for LLMs (especially for latency).</li>
+<li>Concrete facts/measurements should be passed as context.</li>
+<li>Being able to iterate fast by creating training loops is key for physical data.</li>
+</ul>
+<h2 id="tidbits">Fun Tidbits :)</h2>
+<div class="post-gallery"><figure class="post-figure"><video src="/blog/fsd-wheelchair/tidbit-2.mp4" loop muted playsinline preload="none" data-autoplay></video><figcaption>Picking up the chair</figcaption></figure>
+<figure class="post-figure"><video src="/blog/fsd-wheelchair/tidbit-1.mp4" loop muted playsinline preload="none" data-autoplay></video><figcaption>Initial readings</figcaption></figure>
+<figure class="post-figure"><video src="/blog/fsd-wheelchair/tidbit-3.mp4" loop muted playsinline preload="none" data-autoplay></video><figcaption>The first successful drive</figcaption></figure>
+</div>
+<p>The code is <a href="https://github.com/ibraheemshaikh5/fsd-wheelchair" target="_blank" rel="noopener noreferrer">on GitHub</a> and the hackathon write-up is <a href="https://devpost.com/software/fsd-wheelchair" target="_blank" rel="noopener noreferrer">on Devpost</a>.</p>
+        </div>
+      </article>
+      <footer class="footer">
+        <a href="/">Home</a>
+        <a href="https://github.com/urjitc" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/in/urjitc" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://x.com/urjit_" target="_blank" rel="noopener noreferrer">X</a>
+        <a href="mailto:urjitc@gmail.com">Email</a>
+      </footer>
+    </main>
+    <script type="module">
+      // The clips at the bottom play (muted, looping) only once they're near the screen, so
+      // opening the post doesn't download them; they pause again when scrolled away.
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const { target, isIntersecting } of entries) {
+            if (!(target instanceof HTMLVideoElement)) continue
+            if (isIntersecting) target.play().catch(() => {})
+            else target.pause()
+          }
+        },
+        { rootMargin: '200px' },
+      )
+      for (const video of document.querySelectorAll('video[data-autoplay]')) observer.observe(video)
+    </script>
+  </body>
+</html>

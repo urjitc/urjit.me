@@ -442,7 +442,9 @@
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
+  /* Light (300) is too faint this small, white on red: small text gets Regular. */
+  font-weight: 400;
   cursor: pointer;
 }
 

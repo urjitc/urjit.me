@@ -23,6 +23,8 @@
   color: var(--fg);
   background: var(--bg);
   font-family: "Jost Variable", "Jost fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Light reads well at 16px and up. Text smaller than that (controls, dates, footer) is
+     set in Regular: Light is too faint that small, especially white on red. */
   font-weight: 300;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -119,5 +121,47 @@ body {
 @keyframes edge-in {
   to {
     opacity: 1;
+  }
+}
+
+/* A quiet row of plain links at the very bottom. */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 88px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.footer a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 150ms;
+}
+
+.footer a:focus-visible {
+  color: var(--fg);
+}
+
+a {
+  color: inherit;
+  text-decoration-color: color-mix(in srgb, var(--fg) 40%, transparent);
+  text-underline-offset: 3px;
+}
+
+a:focus-visible {
+  text-decoration-color: currentColor;
+}
+
+/* Hover only where there's a real pointer: on touch, a tap would leave it stuck on. */
+@media (hover: hover) {
+  a:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .footer a:hover {
+    color: var(--fg);
   }
 }
