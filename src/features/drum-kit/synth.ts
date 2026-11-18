@@ -104,8 +104,8 @@ function clap(play: Play, at: number): void {
 
 /**
  * Per-drum level trims in dB, measured off the site's output (loudness over 400 ms, roughly
- * K-weighted) and set against the snare: kick +2 (Trap's 808 untrimmed: the meter undervalues its
- * sub-bass, and trimmed it sounded far too quiet), bell -1, open hat -2,
+ * K-weighted) and set against the snare: kick +2 (Trap's 808 +4 over its own level: the meter
+ * overrates its sub-bass, which small speakers can't play), bell -1, open hat -2,
  * closed hat -6. The crash/ride sits under the snare (6 dB on Rock, 3 on the synths):
  * level with it on the meter, it was too loud by ear. Toms keep their recorded level (6-9 dB over the
  * snare on the meter): trimmed to match, they sounded too quiet by ear.
@@ -158,7 +158,7 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
   },
   trap: {
     kind: 'synth',
-    levels: { hihat: 2.5, 'hihat-open': -1, ride: -5.5, bell: -4 },
+    levels: { kick: 4, hihat: 2.5, 'hihat-open': -1, ride: -5.5, bell: -4 },
     reverb: 0.18,
     drive: 1.4,
     noiseHold: 1,
@@ -166,7 +166,10 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
       // 808 boom: a sine with a quick pitch blip, then a long tail.
       kick: (p, t) => {
         tone(p, t, 'sine', 110, 52, 0.06, 1.1, 1)
-        noise(p, t, 'lowpass', 3000, 0.006, 0.35)
+        // Laptop and phone speakers barely play 52 Hz: an octave-up partial and a firmer
+        // click let the 808 cut through on them without thinning it on real speakers.
+        tone(p, t, 'triangle', 220, 104, 0.05, 0.5, 0.4)
+        noise(p, t, 'lowpass', 3000, 0.008, 0.5)
       },
       // 808 snare body (two tones) layered with a clap, as trap usually does.
       snare: (p, t) => {
