@@ -414,3 +414,23 @@
     text-underline-offset: 3px;
   }
 }
+
+/* With a mouse, the kit's cursor is a pair of drumsticks seen from the player's seat; on each
+   click the other stick comes down (index.ts sets data-stick). The click lands where the
+   tips meet. Links that aren't drums (the MAPEX badge) keep the normal pointer. */
+@media (hover: hover) and (pointer: fine) {
+  .kit,
+  .kit .piece {
+    cursor: url("./cursors/sticks-rest.svg") 20 11, pointer;
+  }
+
+  .kit[data-stick="left"],
+  .kit[data-stick="left"] .piece {
+    cursor: url("./cursors/sticks-left.svg") 20 11, pointer;
+  }
+
+  .kit[data-stick="right"],
+  .kit[data-stick="right"] .piece {
+    cursor: url("./cursors/sticks-right.svg") 20 11, pointer;
+  }
+}

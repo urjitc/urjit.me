@@ -1,6 +1,8 @@
 import { KITS, loadSamples, playDrum, type Kit } from './synth'
 
 const HOLD_MS = 500
+/** How long the drumstick cursor shows a stick down after a click (ms). */
+const STICK_MS = 110
 /** Gap between a drum's key labels (px). */
 const KEY_GAP = 8
 /** How far key labels sit inside a drum's rim, clear of its double hoop lines (px).
@@ -253,6 +255,9 @@ export function mountDrumKit(
   const savedKit = localStorage.getItem(KIT_KEY)
   let currentKit: Kit = KITS.find((name) => name === savedKit) ?? 'rock'
   let hold: { piece: HTMLAnchorElement; ready: boolean; timer: number } | null = null
+  // The drumstick cursor (drum-kit.css): each click brings the other stick down.
+  let stick: 'left' | 'right' = 'right'
+  let stickTimer: number | undefined
   // Fetch the kit in play once the page's own files are in, so samples never compete with
   // the first paint; with sound off, nothing loads until it's turned on.
   const loadKit = () => {
@@ -364,6 +369,12 @@ export function mountDrumKit(
     const piece = (event.target as Element).closest<HTMLElement>('.piece')
     if (!piece || event.button !== 0) return
     hit(piece)
+    if (event.pointerType !== 'touch') {
+      stick = stick === 'left' ? 'right' : 'left'
+      kit.dataset.stick = stick
+      clearTimeout(stickTimer)
+      stickTimer = setTimeout(() => delete kit.dataset.stick, STICK_MS)
+    }
     if (!(piece instanceof HTMLAnchorElement)) return
     endHold()
     piece.dataset.holding = ''
