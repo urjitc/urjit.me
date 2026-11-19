@@ -60,13 +60,13 @@
 <p>The three main functionalities are:</p>
 <ol>
 <li><strong>Summon</strong>
-<p>If a user is physically separated from the wheelchair. They press a summon button on their iPad. The gps unit on the wheelchair navigates around objects and places itself at a convenient location for the user to mount it.</p></li>
+<p>If a user is physically separated from the wheelchair. They press a summon button on their iPad and the wheelchair navigates around objects and places itself at a convenient location for the user to mount it.</p></li>
 <li><strong>Indoor navigation</strong>
-<p>Using natural language (i.e. &quot;take me to the blue sofa&quot;) via voice or type we identify a target in the view or explore the area until the target is found. The wheelchair carefully navigates to the target and ends the ride once it’s at a convenient dismount location.</p></li>
+<p>Using natural language (i.e. &quot;take me to the blue sofa&quot;) via voice or type, the wheelchair finds the target (exploring if it has to), carefully navigates to it and ends the ride once it’s at a convenient dismount location.</p></li>
 <li><strong>Outdoor navigation</strong>
-<p>Using type or voice name any location within a 0.5 mile radius, we build off of a Google Maps API for walk/bike routing. The camera navigates towards the destination, avoiding obstacles, and exercising caution (looking both ways, waiting for road cross signal, etc.) to arrive to the destination.</p></li>
+<p>Using type or voice name any location within a 0.5 mile radius, we build off of a Google Maps API for walk/bike routing, avoiding obstacles and exercising caution (looking both ways, waiting for road cross signal, etc.) to arrive to the destination.</p></li>
 </ol>
-<p>The camera feed is streamed from a phone mounted onto the wheelchair. The main user interface is via the handheld iPad which allows for target intake, trip observation, and manual override. The physical joyride also serves as an emergency failsafe.</p>
+<p>The physical joyride also serves as an emergency failsafe.</p>
 <p>Wheelchairs like these can cost upwards of $30,000 and all in we built this FSD wheelchair for roughly 1% of that cost.</p>
 <aside class="post-aside"><p>The rest of this post is a technical read: about our methodology, experiments, and results. <a class="post-jump" href="#tidbits">Scroll to the bottom for some fun tidbits xD</a></p>
 </aside>
@@ -82,12 +82,12 @@
 <p>Everything else hangs off a private mesh network (using <a href="https://tailscale.com" target="_blank" rel="noopener noreferrer">Tailscale</a>): the iPhone strapped to the chair streams camera, gyro, and GPS; a model decides where to go; a backend server turns those decisions into stick commands; and an iPad is the rider’s screen.</p>
 <figure class="post-figure"><img src="/blog/fsd-wheelchair/system.svg" alt="Diagram of the phone, model, Arduino and iPad" loading="lazy" width="1060" height="380" decoding="async"></figure>
 <h2>Building the model</h2>
-<p>We started with public benchmarks and ran tests for out-the-box robotics AI models making decisions for our wheelchair’s movements, and we finally landed on <a href="https://omnivla-nav.github.io/" target="_blank" rel="noopener noreferrer">OmniVLA</a> for it’s unique ability to work both indoors and outdoors, and to take plain language as its goal. OmniVLA’s size was also convenient for latency since we needed quick responses and to build an agent harness around that (on a rented A10 through <a href="https://modal.com" target="_blank" rel="noopener noreferrer">Modal</a> it answers about four times a second). Every answer gives us eight waypoints which can dictate the next few seconds of movement but we run a new model call for every ~28cm of movement.</p>
+<p>We started with public benchmarks and tested out-the-box robotics AI models, and we finally landed on <a href="https://omnivla-nav.github.io/" target="_blank" rel="noopener noreferrer">OmniVLA</a> for it’s unique ability to work both indoors and outdoors, and to take plain language as its goal. OmniVLA’s size was also convenient for latency (on a rented A10 through <a href="https://modal.com" target="_blank" rel="noopener noreferrer">Modal</a> it answers about four times a second), and every answer gives us eight waypoints for the next few seconds of movement.</p>
 <p>OmniVLA worked well out of the box but still had 3 large issues.</p>
 <ul>
 <li><strong>Understanding Wheelchair Size.</strong> OmniVLA learned on small robots. Our camera sits 28 cm off the floor on the chair’s front-left corner, and there’s chair to the right of it. It’s possible to bake this understanding into the harness but it’s much less effective as compared to baking it into the model’s actual weights through post-training.</li>
-<li><strong>Ability for a rider to dismount.</strong> For our use case, the wheelchair needs to stop at a location convenient enough for the rider to dismount or mount effectively. OmniVLA out of the box would stop once the target is within complete view, not where the rider could dismount.</li>
-<li><strong>Memory.</strong> Since the model only sees in single frames, after steering around the box, once it could no longer see it, it would steer right back into it. The model also has no context between frames, so if the chair moves too far between two calls, the next frame confuses it.</li>
+<li><strong>Ability for a rider to dismount.</strong> OmniVLA out of the box would stop once the target is within complete view, not where the rider could dismount.</li>
+<li><strong>Memory.</strong> Since the model only sees in single frames, after steering around the box, once it could no longer see it, it would steer right back into it.</li>
 </ul>
 <h2>Experiment 1: use an LLM to drive</h2>
 <p>The quickest way to find out whether these were perception problems or policy problems was to swap the policy. We gave Claude the camera picture and a handful of moves: forward up to a meter at a time, back a little, turn on the spot up to 120°. We gave the model harness context on the size, where the camera sits relevant to the centerline, and also built memory of the whole conversation so it knows what steps were taken previously.</p>
