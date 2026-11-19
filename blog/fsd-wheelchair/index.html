@@ -55,17 +55,13 @@
 <p>The wheel chair navigates fully autonomously both indoors and outdoors. Using a simple iPad interface a user can simply speak where they want to go (an address or even &quot;take me to the bathroom&quot;).</p>
 <p>The three main functionalities are:</p>
 <ol>
-<li><strong>Summon</strong></li>
+<li><strong>Summon</strong>
+<p>If a user is physically separated from the wheelchair. They press a summon button on their iPad. The gps unit on the wheelchair navigates around objects and places itself at a convenient location for the user to mount it.</p></li>
+<li><strong>Indoor navigation</strong>
+<p>Using natural language (i.e. &quot;take me to the blue sofa&quot;) via voice or type we identify a target in the view or explore the area until the target is found. The wheelchair carefully navigates to the target and ends the ride once it’s at a convenient dismount location.</p></li>
+<li><strong>Outdoor navigation</strong>
+<p>Using type or voice name any location within a 0.5 mile radius, we build off of a Google Maps API for walk/bike routing. The camera navigates towards the destination, avoiding obstacles, and exercising caution (looking both ways, waiting for road cross signal, etc.) to arrive to the destination.</p></li>
 </ol>
-<p>If a user is physically separated from the wheelchair. They press a summon button on their iPad. The gps unit on the wheelchair navigates around objects and places itself at a convenient location for the user to mount it.</p>
-<ol start="2">
-<li><strong>Indoor navigation</strong></li>
-</ol>
-<p>Using natural language (i.e. &quot;take me to the blue sofa&quot;) via voice or type we identify a target in the view or explore the area until the target is found. The wheelchair carefully navigates to the target and ends the ride once it’s at a convenient dismount location.</p>
-<ol start="3">
-<li><strong>Outdoor navigation</strong></li>
-</ol>
-<p>Using type or voice name any location within a 0.5 mile radius, we build off of a Google Maps API for walk/bike routing. The camera navigates towards the destination, avoiding obstacles, and exercising caution (looking both ways, waiting for road cross signal, etc.) to arrive to the destination.</p>
 <p>The camera feed is streamed from a phone mounted onto the wheelchair. The main user interface is via the handheld iPad which allows for target intake, trip observation, and manual override. The physical joyride also serves as an emergency failsafe.</p>
 <p>Wheelchairs like these can cost upwards of $30,000 and all in we built this FSD wheelchair for roughly 1% of that cost.</p>
 <aside class="post-aside"><p>The rest of this post is a technical read: about our methodology, experiments, and results. <a class="post-jump" href="#tidbits">Scroll to the bottom for some fun tidbits xD</a></p>
@@ -87,15 +83,15 @@
 <ul>
 <li><strong>Understanding Wheelchair Size.</strong> OmniVLA learned on small robots. Our camera sits 28 cm off the floor on the chair’s front-left corner, and there’s chair to the right of it. It’s possible to bake this understanding into the harness but it’s much less effective as compared to baking it into the model’s actual weights through post-training.</li>
 <li><strong>Ability for a rider to dismount.</strong> For our use case, the wheelchair needs to stop at a location convenient enough for the rider to dismount or mount effectively. OmniVLA out of the box would stop once the target is within complete view, not where the rider could dismount.</li>
-<li><strong>Memory.</strong> Since the model only sees in single frames, after steering around the box, once it could no longer see it, it would steer right back into it.</li>
+<li><strong>Memory.</strong> Since the model only sees in single frames, after steering around the box, once it could no longer see it, it would steer right back into it. The model also has no context between frames, so if the chair moves too far between two calls, the next frame confuses it.</li>
 </ul>
-<p>The model also has no context between frames, so if the chair moves too far between two calls, the next frame confuses it.</p>
 <h2>Experiment 1: use an LLM to drive</h2>
 <p>The quickest way to find out whether these were perception problems or policy problems was to swap the policy. We gave Claude the camera picture and a handful of moves: forward up to a meter at a time, back a little, turn on the spot up to 120°. We gave the model harness context on the size, where the camera sits relevant to the centerline, and also built memory of the whole conversation so it knows what steps were taken previously.</p>
 <p>The LM understood the scene better than OmniVLA, but it was a poor driver. Every step was slow (2-3s) so the chair would move in stop-and-go steps. Haiku was a little faster and no better at distance. Extended thinking did not help.</p>
 <h2>Experiment 2: calibrate the frame of view (fov)</h2>
 <p><a href="https://deepmind.google/models/gemini-robotics/embodied-reasoning/" target="_blank" rel="noopener noreferrer">Gemini Robotics-ER 2</a> is built to point at things in an image, so we used tape to draw parking-camera guidelines in order to calibrate the model (where the chair’s two sides will pass, with marks at 0.5, 1 and 2 m) and a fan of up to seven numbered paths, from 60° left to 60° right in 20° steps.</p>
 <p>With that the chair’s footprint becomes concrete in the input the model receives and every step can be calibrated for the actual depth in the frame.</p>
+<figure class="post-figure post-figure--narrow"><img src="/blog/fsd-wheelchair/calibration.jpg" alt="A camera frame of a floor with a taped rectangle, overlaid with red and green outlines" loading="lazy" width="960" height="540" decoding="async"><figcaption>Checking the camera model against tape on the floor. Green is the fitted model, landing on the tape; at 0.84 m the depth estimate is about 3 cm off.</figcaption></figure>
 <h2>Experiment 3: let the model draw the route</h2>
 <p>We finally split the decision into two parts, Gemini decides only <em>where</em> to go by marking the goal and drawing a route as a few points on the floor. The agent harness drives the chair by fitting the route to the floor using the depth of the phone camera and continues to follow it between model responses. The harness also measures the chair’s turns using the phone’s gyro.</p>
 <figure class="post-figure"><img src="/blog/fsd-wheelchair/route-comparison.jpg" alt="The same camera frame three times, each with a route drawn by a different model towards the stairs behind an ottoman" loading="lazy" width="1960" height="414" decoding="async"><figcaption>Three models asked to draw a route to the stairs. Gemini Robotics-ER 2 goes around the ottoman in 3.4 s. Claude Sonnet heads for the wrong side. Gemini 3.8 Flash gets there, in 15 s.</figcaption></figure>
@@ -140,9 +136,8 @@
 <li><strong>Memory</strong>. We mapped out 15cm (radius) cells so that obstacles became clusters in the harness’s memory.</li>
 <li><strong>Turns</strong>. Using the phone’s gyro we have a check to estimate how far the chair turned on-top of the intention based on wheel speed.</li>
 </ul>
-<figure class="post-figure post-figure--narrow"><img src="/blog/fsd-wheelchair/calibration.jpg" alt="A camera frame of a floor with a taped rectangle, overlaid with red and green outlines" loading="lazy" width="960" height="540" decoding="async"><figcaption>Checking the camera model against tape on the floor. Green is the fitted model, landing on the tape; at 0.84 m the depth estimate is about 3 cm off.</figcaption></figure>
 <h2>Turning the teacher’s drives into data</h2>
-<p>This work is similar to what Urjit and I do at <a href="https://rudimint.com" target="_blank" rel="noopener noreferrer">Rudimint</a>, with the difference being: you cannot generate physical data by running a script overnight. Every bit of training data requires the actual wheelchair to move in the physical world so our first step was to build structure for the data collection loop.</p>
+<p>This work is similar to what Ibraheem and I do at <a href="https://rudimint.com" target="_blank" rel="noopener noreferrer">Rudimint</a>, with the difference being: you cannot generate physical data by running a script overnight. Every bit of training data requires the actual wheelchair to move in the physical world so our first step was to build structure for the data collection loop.</p>
 <ul>
 <li><strong>Episodes.</strong> Every run gets logged with gyro reading, command and corresponding camera frame, believed position, actual position, etc. We also hand curate &quot;golden&quot;/perfect solutions for each run.</li>
 <li><strong>Every failure has justification.</strong> For example “obstacle 0.4 m ahead”, “asked left 30°, got 21°”, “gyro went quiet”.</li>
@@ -184,7 +179,7 @@
 <li><strong>Schedule:</strong> 300 steps at batch size 8 on one 80 GB GPU on Modal, about five minutes.</li>
 </ul>
 <p>Training and driving are both in a single forward pass.</p>
-<h2>Evals, three ways</h2>
+<h2>Evals, two ways</h2>
 <p><strong>Held-out.</strong> We hold out a contiguous slice from the middle of each drive.</p>
 <figure class="post-bars"><div class="post-bar"><div class="post-bar-head"><span class="post-bar-label">Original OmniVLA</span><span class="post-bar-value">0.40 m</span></div>
 <div class="post-bar-track"><div class="post-bar-fill" style="width:100%"></div>

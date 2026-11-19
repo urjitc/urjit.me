@@ -104,6 +104,10 @@
   margin-top: 0.6em;
 }
 
+.post-body li > p {
+  margin-bottom: 0;
+}
+
 .post-body [id] {
   scroll-margin-top: 24px;
 }
