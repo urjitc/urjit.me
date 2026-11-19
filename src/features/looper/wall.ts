@@ -33,7 +33,8 @@ async function api<T>(init?: RequestInit): Promise<T> {
  * (worker/jams.ts); if the name's refused, the row fades out and the name goes back in the
  * field. Nobody else sees a jam until it passes. Jams folds open the list, where tapping a
  * jam plays it on the kit right above (tapping again stops it). Jams are for listening:
- * playing one leaves your own loop alone.
+ * playing one leaves your own loop alone. The list is fetched as the page loads, so Jams
+ * opens at once; each open fetches it afresh for the next.
  */
 export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): { refresh(): void } {
   const buttons = root.querySelector<HTMLElement>('.loop-buttons')!
@@ -48,6 +49,16 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
   /** Your posted jams still being checked, kept at the top when the list reloads. */
   const pending = new Set<HTMLLIElement>()
   let noteTimer: number | undefined
+  /** The wall as last fetched; null until the first fetch succeeds. */
+  let latest: Jam[] | null = null
+  let loading: Promise<void> | null = null
+
+  function load(): Promise<void> {
+    loading ??= api<Jam[]>()
+      .then((jams) => void (latest = jams), () => {})
+      .finally(() => (loading = null))
+    return loading
+  }
 
   /** Shows a message on the looper's info line; a passing one clears itself. */
   function say(message: string, passing = false): void {
@@ -73,10 +84,15 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
   async function showList(): Promise<void> {
     toggle.setAttribute('aria-expanded', 'true')
     drawer.inert = false
-    const jams = await api<Jam[]>().catch(() => null)
-    list.replaceChildren(...pending, ...(jams ?? []).map(row))
-    if (!jams) say('Couldn’t load the jams.', true)
-    else if (!jams.length && !pending.size) say('No jams yet. Record the first!', true)
+    if (latest) void load()
+    else {
+      say('Loading jams…')
+      await load()
+      say('')
+    }
+    list.replaceChildren(...pending, ...(latest ?? []).map(row))
+    if (!latest) say('Couldn’t load the jams.', true)
+    else if (!latest.length && !pending.size) say('No jams yet. Record the first!', true)
   }
 
   function row(jam: Jam): HTMLLIElement {
@@ -130,11 +146,13 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
     submit.disabled = true
     showForm(false)
     if (drawer.inert) void showList()
-    api({
+    api<{ id: string }>({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, pattern: jam.pattern, kit: jam.kit }),
     })
+      // Keep it on the wall when the list is next shown, even if that list was fetched before it landed.
+      .then(({ id }) => void (latest = [{ ...jam, id }, ...(latest ?? [])]))
       .catch((error: Error) => {
         // Refused (or failed): take it back off, and keep the name to fix.
         item.animate([{ opacity: 1 }, { opacity: 0 }], 200).finished.then(() => item.remove())
@@ -145,6 +163,7 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
       .finally(() => pending.delete(item))
   })
 
+  void load()
   refresh()
   return { refresh }
 }
