@@ -14,12 +14,14 @@ const COUNT_IN = 4
 type Take = Hit & { played: number }
 
 /**
- * Where the looper is; each mode shows only the buttons that mean something in it.
+ * Where the looper is; each mode shows only the buttons that mean something in it, and
+ * within a loop, ones that can't be used just now dim rather than fold, so the row holds.
  *
  *   browsing    nothing recorded              Record · Jams
  *   listening   a jam from the wall plays     Record · Jams (the list open)
  *   recording   a take, after a bar's count-in unless your loop was playing
- *                                             Done · tempo (first take) · Undo (once it has hits)
+ *                 the first                   Done · tempo, which Undo replaces at the first hit
+ *                 a layer                     Done · Stop · Undo · Post (dim)
  *   playing     your loop                     Record · Stop · Undo · Post
  *   stopped     your loop, silent             Record · Play · Undo · Post
  *   naming      the name field for posting, over whatever was playing
@@ -32,11 +34,11 @@ type Mode = 'browsing' | 'listening' | 'recording' | 'playing' | 'stopped' | 'na
  * Record counts in a bar of clicks, lighting the last bar's dots as if leading round into
  * the first; then whatever's played loops at the exact times it was played, a click keeping
  * time and a dot per beat showing where the loop is. Done ends the take and the loop plays
- * on; Record again adds a layer. Undo during a take clears just that take while the clicks
- * carry on, so a fluffed take is simply played again; otherwise it takes off the newest
- * layer, and with none left it's back to browsing. While the first take has no hits, − and
- * + set the tempo, the clicks following at once; the tempo then holds for the loop, and for
- * the next one. Post names the loop and hands it to the wall, back to browsing with it on
+ * on (Stop ends it silent); Record again adds a layer. Undo during a take clears just that
+ * take while the clicks carry on, so a fluffed take is simply played again; otherwise it
+ * takes off the newest layer, and with none left it's back to browsing. While the first
+ * take has no hits, − and + set the tempo, the clicks following at once; the tempo then
+ * holds for the loop, and for the next one. Post names the loop and hands it to the wall, back to browsing with it on
  * top; if its name's refused, it comes back to rename. Jams opens the wall's list, where
  * tapping a jam plays it at its tempo, and tapping it again (or closing the list) stops it.
  *
@@ -89,18 +91,22 @@ export function mountLooper(root: HTMLElement, kit: DrumKit): void {
     const take = layers.at(-1) ?? []
     const looped = mode === 'playing' || mode === 'stopped'
     const browsing = mode === 'browsing' || mode === 'listening'
+    const firstTake = mode === 'recording' && layers.length === 1
+    const layering = mode === 'recording' && !firstTake
     buttons.inert = mode === 'naming'
     form.inert = mode !== 'naming'
     record.setAttribute('aria-pressed', String(mode === 'recording'))
     record.querySelector('.label')!.textContent = mode === 'recording' ? 'Done' : 'Record'
-    tempo.inert = mode !== 'recording' || layers.length > 1
+    tempo.inert = !firstTake || take.length > 0
     bpmLabel.textContent = String(bpm)
-    slower.disabled = take.length > 0 || bpm <= BPM.min
-    faster.disabled = take.length > 0 || bpm >= BPM.max
-    playButton.inert = !looped
-    playButton.querySelector('.label')!.textContent = mode === 'playing' ? 'Stop' : 'Play'
-    undo.inert = mode === 'recording' ? !take.length : !looped
-    postButton.inert = !looped
+    slower.disabled = bpm <= BPM.min
+    faster.disabled = bpm >= BPM.max
+    playButton.inert = !looped && !layering
+    playButton.querySelector('.label')!.textContent = mode === 'stopped' ? 'Play' : 'Stop'
+    undo.inert = firstTake ? !take.length : !looped && !layering
+    undo.disabled = mode === 'recording' && !take.length
+    postButton.inert = !looped && !layering
+    postButton.disabled = layering
     jamsButton.inert = !browsing
     if (!browsing) wall.close()
     if (mode !== 'listening') wall.unmark()
@@ -205,14 +211,15 @@ export function mountLooper(root: HTMLElement, kit: DrumKit): void {
     go('recording')
   })
 
+  // Play or Stop; Stop during a layer ends the take too.
   playButton.addEventListener('click', () => {
-    if (mode === 'playing') {
-      stopClock()
-      go('stopped')
-    } else {
+    if (mode === 'stopped') {
       startClock(0.05, bpm)
-      go('playing')
+      return go('playing')
     }
+    if (!layers.at(-1)?.length) layers.pop()
+    stopClock()
+    go('stopped')
   })
 
   // During a take, clears just that take (the clicks carry on); otherwise the newest layer.

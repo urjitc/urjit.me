@@ -188,21 +188,16 @@
         <div class="looper" id="looper" role="group" aria-label="Loop">
           <div class="loop-bar">
             <div class="loop-buttons">
-              <!-- Record stays put in the middle; the rest unfold to either side of it. -->
-              <span class="loop-side">
-                <span class="loop-tempo optional" role="group" aria-label="Tempo" inert><span class="inner">
-                  <button type="button" data-loop="slower" aria-label="Slower"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M7 12h10" /></svg></button>
-                  <span><span class="bpm">100</span> BPM</span>
-                  <button type="button" data-loop="faster" aria-label="Faster"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M7 12h10" /><path d="M12 7v10" /></svg></button>
-                </span></span>
-                <button type="button" data-loop="play" class="optional" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path class="play" d="M8 5v14l11 -7z" /><path class="stop" d="M6 6h12v12h-12z" /></svg><span class="label">Play</span></span></button>
-              </span>
               <button type="button" data-loop="record" aria-pressed="false"><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" /></svg><span class="label">Record</span></span></button>
-              <span class="loop-side">
-                <button type="button" data-loop="undo" class="optional" aria-label="Undo" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg><span class="label">Undo</span></span></button>
-                <button type="button" data-wall="post" class="optional" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 19v-14" /><path d="M6 11l6 -6l6 6" /></svg><span class="label">Post</span></span></button>
-                <button type="button" data-wall="toggle" class="optional" aria-expanded="false" aria-controls="jam-list"><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 6h10" /><path d="M4 12h10" /><path d="M4 18h6" /><path d="M17 18v-12l4 2" /><circle cx="15" cy="18" r="2" /></svg><span class="label">Jams</span></span></button>
-              </span>
+              <span class="loop-tempo optional" role="group" aria-label="Tempo" inert><span class="inner">
+                <button type="button" data-loop="slower" aria-label="Slower"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M7 12h10" /></svg></button>
+                <span><span class="bpm">100</span> BPM</span>
+                <button type="button" data-loop="faster" aria-label="Faster"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M7 12h10" /><path d="M12 7v10" /></svg></button>
+              </span></span>
+              <button type="button" data-loop="play" class="optional" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path class="play" d="M8 5v14l11 -7z" /><path class="stop" d="M6 6h12v12h-12z" /></svg><span class="label">Play</span></span></button>
+              <button type="button" data-loop="undo" class="optional" aria-label="Undo" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg><span class="label">Undo</span></span></button>
+              <button type="button" data-wall="post" class="optional" inert><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 19v-14" /><path d="M6 11l6 -6l6 6" /></svg><span class="label">Post</span></span></button>
+              <button type="button" data-wall="toggle" class="optional" aria-expanded="false" aria-controls="jam-list"><span class="inner"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 6h10" /><path d="M4 12h10" /><path d="M4 18h6" /><path d="M17 18v-12l4 2" /><circle cx="15" cy="18" r="2" /></svg><span class="label">Jams</span></span></button>
             </div>
             <form class="post-form" inert>
               <input name="name" maxlength="24" autocomplete="off" required placeholder="Name your jam" aria-label="Jam name" />
