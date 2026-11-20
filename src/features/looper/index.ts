@@ -1,6 +1,7 @@
 import type { DrumKit } from '../drum-kit'
 import { audioTime, playTick } from '../drum-kit/synth'
 import { beatSeconds, BEATS, BPM, encodeHits, loopSeconds, type Hit } from './jam'
+import { mountJamWall } from './wall'
 
 /** How far ahead (s) hits go on the audio clock, and how often (ms) that's topped up. */
 const LOOKAHEAD = 0.1
@@ -12,45 +13,60 @@ const COUNT_IN = 4
     repeats on the next time round rather than doubling what was just heard. */
 type Take = Hit & { played: number }
 
-export interface Looper {
-  /** Plays someone's jam from the wall at its tempo, leaving your own loop as it is. */
-  listen(hits: Hit[], bpm: number): void
-  stop(): void
-  /** Your loop's hits in jam pattern form, or '' when nothing's recorded. */
-  pattern(): string
-  /** Your loop's tempo. */
-  bpm(): number
-}
+/**
+ * Where the looper is; each mode shows only the buttons that mean something in it.
+ *
+ *   browsing    nothing recorded              Record · Jams
+ *   listening   a jam from the wall plays     Record · Jams (the list open)
+ *   recording   a take, after a bar's count-in unless your loop was playing
+ *                                             Done · tempo (first take) · Undo (once it has hits)
+ *   playing     your loop                     Record · Stop · Undo · Post
+ *   stopped     your loop, silent             Record · Play · Undo · Post
+ *   naming      the name field for posting, over whatever was playing
+ */
+type Mode = 'browsing' | 'listening' | 'recording' | 'playing' | 'stopped' | 'naming'
 
 /**
- * A two-bar loop over the kit. Press Record: a bar of clicks counts in, lighting the last
- * bar's dots as if leading round into the first, then whatever's played loops at the exact
- * times it was played, while a click keeps time and a dot per beat shows where the loop is. Recording again adds a layer; Undo takes the last one off.
- * A jam from the wall plays through the same clock, at its own tempo, in place of your loop
- * until it stops. Recording the first take, − and + by Record set the tempo, the clicks
- * following at once, until the first hit fixes it.
+ * A two-bar loop over the kit, and the public jam wall under it (wall.ts).
+ *
+ * Record counts in a bar of clicks, lighting the last bar's dots as if leading round into
+ * the first; then whatever's played loops at the exact times it was played, a click keeping
+ * time and a dot per beat showing where the loop is. Done ends the take and the loop plays
+ * on; Record again adds a layer. Undo during a take clears just that take while the clicks
+ * carry on, so a fluffed take is simply played again; otherwise it takes off the newest
+ * layer, and with none left it's back to browsing. While the first take has no hits, − and
+ * + set the tempo, the clicks following at once; the tempo then holds for the loop, and for
+ * the next one. Post names the loop and hands it to the wall, back to browsing with it on
+ * top; if its name's refused, it comes back to rename. Jams opens the wall's list, where
+ * tapping a jam plays it at its tempo, and tapping it again (or closing the list) stops it.
  *
  * A hit is kept at the audio-clock time its sound played, and the loop replays it at that
  * time, so it comes back exactly as it was heard: the speakers' delay is the same both
  * times, so it needs no correcting. Playback is scheduled a little ahead on the audio clock
  * (web.dev/articles/audio-scheduling), which timers alone can't keep steady.
  */
-export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => void): Looper {
+export function mountLooper(root: HTMLElement, kit: DrumKit): void {
+  const buttons = root.querySelector<HTMLElement>('.loop-buttons')!
   const record = root.querySelector<HTMLButtonElement>('[data-loop="record"]')!
   const playButton = root.querySelector<HTMLButtonElement>('[data-loop="play"]')!
   const undo = root.querySelector<HTMLButtonElement>('[data-loop="undo"]')!
+  const postButton = root.querySelector<HTMLButtonElement>('[data-wall="post"]')!
+  const jamsButton = root.querySelector<HTMLButtonElement>('[data-wall="toggle"]')!
   const tempo = root.querySelector<HTMLElement>('.loop-tempo')!
   const slower = tempo.querySelector<HTMLButtonElement>('[data-loop="slower"]')!
   const faster = tempo.querySelector<HTMLButtonElement>('[data-loop="faster"]')!
   const bpmLabel = tempo.querySelector<HTMLElement>('.bpm')!
+  const form = root.querySelector<HTMLFormElement>('.post-form')!
+  const nameInput = form.querySelector('input')!
+  const submit = form.querySelector<HTMLButtonElement>('[type="submit"]')!
   const dots = Array.from({ length: BEATS }, () => document.createElement('i'))
   root.querySelector('.loop-beats')!.append(...dots)
+  const wall = mountJamWall(root, kit, { listen, stop: () => browse() })
 
+  let mode: Mode = 'browsing'
   let layers: Take[][] = []
-  /** A jam from the wall that's playing instead of your loop. */
-  let listening: Take[] | null = null
-  let recording = false
-  let playing = false
+  /** The wall's jam while listening. */
+  let jam: Take[] = []
   /** Your loop's tempo; and the clock's beat and loop lengths (s), a wall jam's while one plays. */
   let bpm: number = BPM.default
   let beat = beatSeconds(bpm)
@@ -60,27 +76,36 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
   /** Everything before this (seconds from start) is scheduled; and the next beat to be. */
   let scheduled = 0
   let nextBeat = 0
+  /** Set while the clock runs. */
   let timer: number | undefined
   const pending = new Set<number>()
 
-  const mine = () => layers.flat()
-  const takes = () => listening ?? mine()
+  const takes = () => (mode === 'listening' ? jam : layers.flat())
 
-  // Buttons that aren't needed yet are `inert`: looper.css folds them away smoothly.
-  function render(): void {
-    const hasLoop = mine().length > 0
-    record.setAttribute('aria-pressed', String(recording))
-    playButton.inert = !hasLoop && !playing
-    playButton.querySelector('.label')!.textContent = playing ? 'Stop' : 'Play'
-    undo.inert = !hasLoop || listening !== null
-    root.dataset.playing = String(playing)
-    root.dataset.recording = String(recording)
-    root.dataset.listening = String(listening !== null)
-    tempo.inert = !recording || layers.length > 1
+  /** Moves to `next` and shows its buttons. Those not needed are `inert`: looper.css folds
+      them away smoothly. */
+  function go(next: Mode): void {
+    mode = next
+    const take = layers.at(-1) ?? []
+    const looped = mode === 'playing' || mode === 'stopped'
+    const browsing = mode === 'browsing' || mode === 'listening'
+    buttons.inert = mode === 'naming'
+    form.inert = mode !== 'naming'
+    record.setAttribute('aria-pressed', String(mode === 'recording'))
+    record.querySelector('.label')!.textContent = mode === 'recording' ? 'Done' : 'Record'
+    tempo.inert = mode !== 'recording' || layers.length > 1
     bpmLabel.textContent = String(bpm)
-    slower.disabled = hasLoop || bpm <= BPM.min
-    faster.disabled = hasLoop || bpm >= BPM.max
-    onChange()
+    slower.disabled = take.length > 0 || bpm <= BPM.min
+    faster.disabled = take.length > 0 || bpm >= BPM.max
+    playButton.inert = !looped
+    playButton.querySelector('.label')!.textContent = mode === 'playing' ? 'Stop' : 'Play'
+    undo.inert = mode === 'recording' ? !take.length : !looped
+    postButton.inert = !looped
+    jamsButton.inert = !browsing
+    if (!browsing) wall.close()
+    if (mode !== 'listening') wall.unmark()
+    root.dataset.playing = String(timer !== undefined)
+    if (mode === 'naming') nameInput.focus()
   }
 
   function schedule(): void {
@@ -99,7 +124,7 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
       recording, and, as it plays, the beat's dot lit (the count-in lights the last bar's). */
   function tick(index: number): void {
     const at = start + index * beat
-    if (recording) playTick(index % 4 === 0, at)
+    if (mode === 'recording') playTick(index % 4 === 0, at)
     const timeout = setTimeout(() => {
       pending.delete(timeout)
       dots.forEach((dot, i) => dot.classList.toggle('lit', i === (index + BEATS) % BEATS))
@@ -107,37 +132,45 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
     pending.add(timeout)
   }
 
-  /** Starts the loop's clock at `clockBpm`, `lead` seconds ahead of its first beat. */
-  function run(lead: number, clockBpm = bpm): void {
+  /** Starts the clock at `clockBpm`, `lead` seconds ahead of the loop's first beat. */
+  function startClock(lead: number, clockBpm: number): void {
     beat = beatSeconds(clockBpm)
     loop = loopSeconds(clockBpm)
     start = audioTime() + lead
     scheduled = -lead
     nextBeat = Math.ceil(-lead / beat)
-    playing = true
     timer = setInterval(schedule, SCHEDULE_MS)
     schedule()
-    render()
   }
 
-  function stop(): void {
+  function stopClock(): void {
     clearInterval(timer)
+    timer = undefined
     for (const timeout of pending) clearTimeout(timeout)
     pending.clear()
     for (const dot of dots) dot.classList.remove('lit')
-    playing = false
-    recording = false
-    listening = null
-    if (layers.at(-1)?.length === 0) layers.pop()
     // Played live in a run that's over: from the next run, every hit plays from the first time round.
-    for (const take of mine()) take.played = -1
-    render()
+    for (const take of layers.flat()) take.played = -1
+  }
+
+  /** Stops whatever plays and goes back to browsing. */
+  function browse(): void {
+    stopClock()
+    go('browsing')
   }
 
   function listen(hits: Hit[], jamBpm: number): void {
-    stop()
-    listening = hits.map((hit) => ({ ...hit, played: -1 }))
-    run(0.05, jamBpm)
+    stopClock()
+    jam = hits.map((hit) => ({ ...hit, played: -1 }))
+    startClock(0.05, jamBpm)
+    go('listening')
+  }
+
+  /** Ends the take: the loop plays on, or with nothing recorded, it's back to browsing. */
+  function done(): void {
+    if (!layers.at(-1)?.length) layers.pop()
+    if (layers.length) go('playing')
+    else browse()
   }
 
   /** Sets the tempo while the first take's clicks play: they carry on from the last one
@@ -150,50 +183,90 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
     loop = loopSeconds(bpm)
     start = at - last * beat
     scheduled = last * beat
-    render()
+    go(mode)
   }
 
   kit.onPlay((sound, time = audioTime()) => {
-    if (!recording) return
+    if (mode !== 'recording') return
     const played = time - start
     const at = ((played % loop) + loop) % loop
-    layers.at(-1)?.push({ at, sound, played })
-    render()
+    layers.at(-1)!.push({ at, sound, played })
+    go(mode)
   })
 
   record.addEventListener('click', () => {
-    if (recording) {
-      recording = false
-      if (layers.at(-1)?.length === 0) layers.pop()
-      if (!mine().length) stop()
-      render()
-      return
-    }
-    if (listening) stop()
-    recording = true
+    if (mode === 'recording') return done()
+    wall.say('')
+    const wasPlaying = mode === 'playing'
+    if (mode === 'listening') stopClock()
     layers.push([])
     // Over a loop that's playing, record straight in; otherwise count in a bar first.
-    if (playing) render()
-    else run(0.1 + COUNT_IN * beatSeconds(bpm))
+    if (!wasPlaying) startClock(0.1 + COUNT_IN * beatSeconds(bpm), bpm)
+    go('recording')
   })
 
-  playButton.addEventListener('click', () => (playing ? stop() : run(0.05)))
+  playButton.addEventListener('click', () => {
+    if (mode === 'playing') {
+      stopClock()
+      go('stopped')
+    } else {
+      startClock(0.05, bpm)
+      go('playing')
+    }
+  })
+
+  // During a take, clears just that take (the clicks carry on); otherwise the newest layer.
+  undo.addEventListener('click', () => {
+    if (mode === 'recording') layers.at(-1)!.length = 0
+    else layers.pop()
+    if (layers.length) go(mode)
+    else browse()
+  })
+
   slower.addEventListener('click', () => setTempo(bpm - BPM.step))
   faster.addEventListener('click', () => setTempo(bpm + BPM.step))
+  jamsButton.addEventListener('click', () => {
+    if (!wall.isOpen()) return wall.open()
+    wall.close()
+    if (mode === 'listening') browse()
+  })
 
-  undo.addEventListener('click', () => {
-    // While recording, the first Undo clears this take; after that, earlier layers.
-    if (recording && layers.at(-1)?.length) layers.at(-1)!.length = 0
-    else layers.splice(recording ? -2 : -1, 1)
-    if (!mine().length) stop()
-    render()
+  postButton.addEventListener('click', () => go('naming'))
+  const cancel = () => go(timer === undefined ? 'stopped' : 'playing')
+  form.querySelector('[data-wall="cancel"]')!.addEventListener('click', cancel)
+  form.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') cancel()
+  })
+  // Post stays off until there's a name (spaces alone don't count).
+  nameInput.addEventListener('input', () => (submit.disabled = !nameInput.value.trim()))
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault()
+    const name = nameInput.value.trim()
+    const kept = layers
+    nameInput.value = ''
+    submit.disabled = true
+    layers = []
+    browse()
+    wall.post({ name, pattern: encodeHits(kept.flat()), kit: kit.kit(), bpm }).catch(() => {
+      // Refused (the wall says why): bring the loop back to rename, unless a new one's begun.
+      if (layers.length) return
+      stopClock()
+      layers = kept
+      nameInput.value = name
+      submit.disabled = false
+      go('naming')
+    })
   })
 
   // Hidden tabs slow timers to a crawl, so the loop would stutter: stop it instead.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && playing) stop()
+    if (!document.hidden || timer === undefined) return
+    stopClock()
+    if (mode === 'recording' && !layers.at(-1)?.length) layers.pop()
+    if (mode === 'naming') go(mode)
+    else go(layers.length ? 'stopped' : 'browsing')
   })
 
-  render()
-  return { listen, stop, pattern: () => encodeHits(mine()), bpm: () => bpm }
+  go(mode)
 }

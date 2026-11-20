@@ -1,6 +1,5 @@
 import type { DrumKit } from '../drum-kit'
-import { decodeHits, KITS } from './jam'
-import type { Looper } from './index'
+import { decodeHits, KITS, type Hit } from './jam'
 
 type Jam = { id: string; name: string; pattern: string; kit: string; bpm: number; created_at: number }
 
@@ -26,24 +25,33 @@ async function api<T>(init?: RequestInit): Promise<T> {
   return body as T
 }
 
+/** The wall as the looper drives it (index.ts). */
+export interface JamWall {
+  open(): void
+  close(): void
+  isOpen(): boolean
+  /** Unmarks the jam that was playing. */
+  unmark(): void
+  /** Shows a message on the looper's info line; a passing one clears itself. */
+  say(message: string, passing?: boolean): void
+  /** Puts a jam on the wall, at once at the top of the list while the server checks its
+      name; if it's refused, the row goes again, the reason's said, and the promise rejects. */
+  post(jam: Pick<Jam, 'name' | 'pattern' | 'kit' | 'bpm'>): Promise<void>
+}
+
 /**
- * The public jam wall, in the looper under the kit. Post swaps the buttons for a name field
- * (required, up to 24 characters; Escape backs out). Posting is optimistic: your jam goes
- * to the top of the list at once while the server checks its name, which can take seconds
- * (worker/jams.ts); if the name's refused, the row fades out and the name goes back in the
- * field. Nobody else sees a jam until it passes. Jams folds open the list, where tapping a
- * jam plays it on the kit right above (tapping again stops it). Jams are for listening:
- * playing one leaves your own loop alone. The list is fetched as the page loads, so Jams
- * opens at once; each open fetches it afresh for the next. Post and Jams (and the list) fold
- * away while recording.
+ * The public jam wall's list, folding open under the looper. Tapping a jam plays it on the
+ * kit right above (`listen`); tapping it again stops it (`stop`). The list is fetched as
+ * the page loads, so it opens at once; each open fetches it afresh for the next. Posting is
+ * optimistic, since the name check can take seconds (worker/jams.ts); nobody else sees a jam
+ * until it passes.
  */
-export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): { refresh(): void } {
-  const buttons = root.querySelector<HTMLElement>('.loop-buttons')!
-  const postButton = root.querySelector<HTMLButtonElement>('[data-wall="post"]')!
+export function mountJamWall(
+  root: HTMLElement,
+  kit: DrumKit,
+  player: { listen(hits: Hit[], bpm: number): void; stop(): void },
+): JamWall {
   const toggle = root.querySelector<HTMLButtonElement>('[data-wall="toggle"]')!
-  const form = root.querySelector<HTMLFormElement>('.post-form')!
-  const nameInput = form.querySelector('input')!
-  const submit = form.querySelector<HTMLButtonElement>('[type="submit"]')!
   const status = root.querySelector<HTMLElement>('.loop-status')!
   const drawer = root.querySelector<HTMLElement>('.jam-drawer')!
   const list = drawer.querySelector('ul')!
@@ -61,32 +69,13 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
     return loading
   }
 
-  /** Shows a message on the looper's info line; a passing one clears itself. */
   function say(message: string, passing = false): void {
     clearTimeout(noteTimer)
     status.textContent = message
     if (passing) noteTimer = setTimeout(() => (status.textContent = ''), NOTE_MS)
   }
 
-  function refresh(): void {
-    // While recording, only the loop's own buttons show.
-    const recording = root.dataset.recording === 'true'
-    postButton.inert = recording || looper.pattern() === '' || root.dataset.listening === 'true'
-    toggle.inert = recording
-    if (recording) hideList()
-    // A jam stops when anything else plays: unmark its row.
-    if (root.dataset.listening !== 'true') {
-      for (const row of list.querySelectorAll('[aria-pressed="true"]')) row.setAttribute('aria-pressed', 'false')
-    }
-  }
-
-  function showForm(shown: boolean): void {
-    form.inert = !shown
-    buttons.inert = shown
-    if (shown) nameInput.focus()
-  }
-
-  async function showList(): Promise<void> {
+  async function open(): Promise<void> {
     toggle.setAttribute('aria-expanded', 'true')
     drawer.inert = false
     if (latest) void load()
@@ -100,9 +89,13 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
     else if (!latest.length && !pending.size) say('No jams yet. Record the first!', true)
   }
 
-  function hideList(): void {
+  function close(): void {
     drawer.inert = true
     toggle.setAttribute('aria-expanded', 'false')
+  }
+
+  function unmark(): void {
+    for (const button of list.querySelectorAll('[aria-pressed="true"]')) button.setAttribute('aria-pressed', 'false')
   }
 
   function row(jam: Jam): HTMLLIElement {
@@ -117,12 +110,13 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
     meta.textContent = `${KIT_NAMES[jam.kit] ?? jam.kit} · ${jam.bpm} BPM · ${timeAgo(jam.created_at)}`
     button.append(name, meta)
     button.addEventListener('click', () => {
-      if (button.getAttribute('aria-pressed') === 'true') return looper.stop()
+      if (button.getAttribute('aria-pressed') === 'true') return player.stop()
       const hits = decodeHits(jam.pattern, jam.bpm)
       if (!hits) return
       const known = KITS.find((name) => name === jam.kit)
       if (known) kit.setKit(known)
-      looper.listen(hits, jam.bpm)
+      player.listen(hits, jam.bpm)
+      unmark()
       button.setAttribute('aria-pressed', 'true')
     })
     const item = document.createElement('li')
@@ -130,46 +124,25 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
     return item
   }
 
-  postButton.addEventListener('click', () => showForm(true))
-  form.querySelector('[data-wall="cancel"]')!.addEventListener('click', () => showForm(false))
-  form.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') showForm(false)
-  })
-  // Post stays off until there's a name (spaces alone don't count).
-  nameInput.addEventListener('input', () => (submit.disabled = !nameInput.value.trim()))
-  toggle.addEventListener('click', () => (drawer.inert ? void showList() : hideList()))
-  // A new recording makes any message stale.
-  root.querySelector('[data-loop="record"]')!.addEventListener('click', () => say(''))
-
-  form.addEventListener('submit', (event) => {
-    event.preventDefault()
-    const name = nameInput.value.trim()
-    const jam = { id: '', name, pattern: looper.pattern(), kit: kit.kit(), bpm: looper.bpm(), created_at: Date.now() }
+  function post(posted: Pick<Jam, 'name' | 'pattern' | 'kit' | 'bpm'>): Promise<void> {
+    const jam = { ...posted, id: '', created_at: Date.now() }
     const item = row(jam)
     pending.add(item)
-    list.prepend(item)
-    nameInput.value = ''
-    submit.disabled = true
-    showForm(false)
-    if (drawer.inert) void showList()
-    api<{ id: string }>({
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, pattern: jam.pattern, kit: jam.kit, bpm: jam.bpm }),
-    })
+    if (drawer.inert) void open()
+    else list.prepend(item)
+    return api<{ id: string }>({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(posted) })
       // Keep it on the wall when the list is next shown, even if that list was fetched before it landed.
-      .then(({ id }) => void (latest = [{ ...jam, id }, ...(latest ?? [])]))
-      .catch((error: Error) => {
-        // Refused (or failed): take it back off, and keep the name to fix.
-        item.animate([{ opacity: 1 }, { opacity: 0 }], 200).finished.then(() => item.remove())
-        nameInput.value = name
-        submit.disabled = false
-        say(`“${name}” wasn’t posted. ${error.message}`, true)
-      })
+      .then(
+        ({ id }) => void (latest = [{ ...jam, id }, ...(latest ?? [])]),
+        (error: Error) => {
+          item.animate([{ opacity: 1 }, { opacity: 0 }], 200).finished.then(() => item.remove())
+          say(`“${jam.name}” wasn’t posted. ${error.message}`, true)
+          throw error
+        },
+      )
       .finally(() => pending.delete(item))
-  })
+  }
 
   void load()
-  refresh()
-  return { refresh }
+  return { open: () => void open(), close, isOpen: () => !drawer.inert, unmark, say, post }
 }
