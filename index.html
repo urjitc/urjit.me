@@ -203,6 +203,11 @@
           <div class="loop-info">
             <span class="loop-beats" aria-hidden="true"></span>
             <span class="loop-count" aria-hidden="true"></span>
+            <span class="loop-tempo" role="group" aria-label="Tempo">
+              <button type="button" data-loop="slower" aria-label="Slower"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M7 12h10" /></svg></button>
+              <span><span class="bpm">100</span> BPM</span>
+              <button type="button" data-loop="faster" aria-label="Faster"><svg class="icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M7 12h10" /><path d="M12 7v10" /></svg></button>
+            </span>
             <p class="loop-status" role="status"></p>
           </div>
           <div class="jam-drawer" inert><ul class="jam-list" id="jam-list"></ul></div>

@@ -1,8 +1,8 @@
 /* The looper and jam wall, under the kit controls in their quiet style: muted text buttons
    with hairline icons (index.ts, wall.ts). Nothing jumps between states: buttons that
    aren't needed yet are `inert` and fold to nothing, sliding the rest along; the name field
-   fades in over the buttons on the same line; one info line holds the count-in, the beat
-   dots or a message; and the jam list folds open. Each turns visible at once when shown
+   fades in over the buttons on the same line; one info line holds the tempo (while
+   stopped; fixed once there's a take), the count-in, the beat dots or a message; and the jam list folds open. Each turns visible at once when shown
    (so it can take focus straight away) and hidden only once it has faded out. */
 .looper {
   --ease: cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -180,7 +180,7 @@
 }
 
 /* The info line keeps its height, empty or not. A message shows over the count-in, and
-   either over the beat dots. */
+   either over the beat dots; the tempo shows only while stopped with no message. */
 .loop-info {
   height: 22px;
 }
@@ -199,6 +199,43 @@
 .loop-info:has(.loop-status:not(:empty)) .loop-beats,
 .loop-info:has(.loop-status:not(:empty)) .loop-count {
   opacity: 0;
+}
+
+.loop-tempo {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.loop-tempo[inert],
+.loop-info:has(.loop-status:not(:empty)) .loop-tempo {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 180ms ease-out,
+    visibility 0s 180ms;
+}
+
+.looper .loop-tempo button {
+  display: grid;
+  padding: 3px 6px;
+}
+
+.looper .loop-tempo button:focus-visible {
+  color: var(--fg);
+}
+
+.looper .loop-tempo button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Three digits or two, the same width. */
+.loop-tempo .bpm {
+  display: inline-block;
+  min-width: 3ch;
+  text-align: right;
 }
 
 .loop-beats i {

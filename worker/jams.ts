@@ -2,7 +2,7 @@
  * The public jam wall's API, under /api/jams:
  *
  *   GET  /api/jams   the latest jams
- *   POST /api/jams   { name, pattern, kit } → { id }
+ *   POST /api/jams   { name, pattern, kit, bpm } → { id }
  *
  * A jam is only drum hits, so its name is the one thing that could be abusive. Names pass a
  * profanity list (obscenity, which also catches look-alike spellings) and then Llama Guard,
@@ -13,7 +13,7 @@
  *   npx wrangler d1 execute urjit-me-jams --remote --command "DELETE FROM jams WHERE id = '…'"
  */
 import { englishDataset, englishRecommendedTransformers, RegExpMatcher } from 'obscenity'
-import { decodeHits, KITS, NAME_MAX } from '../src/features/looper/jam'
+import { BPM, decodeHits, isBpm, KITS, NAME_MAX } from '../src/features/looper/jam'
 
 // The few binding methods used here (the full types come from @cloudflare/workers-types,
 // which clash with the DOM types the rest of the project compiles against).
@@ -29,7 +29,7 @@ export interface JamsEnv {
   POST_LIMIT: { limit(options: { key: string }): Promise<{ success: boolean }> }
 }
 
-type Jam = { id: string; name: string; pattern: string; kit: string; created_at: number }
+type Jam = { id: string; name: string; pattern: string; kit: string; bpm: number; created_at: number }
 
 const WALL_SIZE = 30
 const profanity = new RegExpMatcher({ ...englishDataset.build(), ...englishRecommendedTransformers })
@@ -37,7 +37,7 @@ const profanity = new RegExpMatcher({ ...englishDataset.build(), ...englishRecom
 export async function handleJams(request: Request, env: JamsEnv): Promise<Response> {
   if (request.method === 'GET') {
     const { results } = await env.DB.prepare(
-      'SELECT id, name, pattern, kit, created_at FROM jams ORDER BY created_at DESC LIMIT ?',
+      'SELECT id, name, pattern, kit, bpm, created_at FROM jams ORDER BY created_at DESC LIMIT ?',
     ).bind(WALL_SIZE).all<Jam>()
     return Response.json(results, { headers: { 'Cache-Control': 'public, max-age=10' } })
   }
@@ -47,16 +47,18 @@ export async function handleJams(request: Request, env: JamsEnv): Promise<Respon
 
   const body: unknown = await request.json().catch(() => null)
   if (!body || typeof body !== 'object') return error(400, 'Bad request.')
-  const { name, pattern, kit } = body as Record<string, unknown>
-  if (typeof pattern !== 'string' || !decodeHits(pattern)) return error(400, 'That loop is empty.')
+  // Pages opened before tempos were stored send none: theirs is the old fixed 100.
+  const { name, pattern, kit, bpm = BPM.default } = body as Record<string, unknown>
+  if (!isBpm(bpm)) return error(400, 'Unknown tempo.')
+  if (typeof pattern !== 'string' || !decodeHits(pattern, bpm)) return error(400, 'That loop is empty.')
   if (typeof kit !== 'string' || !KITS.some((known) => known === kit)) return error(400, 'Unknown kit.')
   const cleaned = typeof name === 'string' ? name.normalize('NFKC').replace(/\s+/g, ' ').trim() : ''
   const problem = await nameProblem(cleaned, env)
   if (problem) return error(422, problem)
 
   const jamId = randomId()
-  await env.DB.prepare('INSERT INTO jams (id, name, pattern, kit, created_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(jamId, cleaned, pattern, kit, Date.now())
+  await env.DB.prepare('INSERT INTO jams (id, name, pattern, kit, bpm, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(jamId, cleaned, pattern, kit, bpm, Date.now())
     .run()
   return Response.json({ id: jamId }, { status: 201 })
 }

@@ -2,7 +2,7 @@ import type { DrumKit } from '../drum-kit'
 import { decodeHits, KITS } from './jam'
 import type { Looper } from './index'
 
-type Jam = { id: string; name: string; pattern: string; kit: string; created_at: number }
+type Jam = { id: string; name: string; pattern: string; kit: string; bpm: number; created_at: number }
 
 const KIT_NAMES: Record<string, string> = { rock: 'Rock', trap: 'Trap', '8bit': '8-bit' }
 const ago = new Intl.RelativeTimeFormat('en', { numeric: 'auto', style: 'short' })
@@ -104,15 +104,15 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
     name.textContent = jam.name
     const meta = document.createElement('span')
     meta.className = 'jam-meta'
-    meta.textContent = `${KIT_NAMES[jam.kit] ?? jam.kit} · ${timeAgo(jam.created_at)}`
+    meta.textContent = `${KIT_NAMES[jam.kit] ?? jam.kit} · ${jam.bpm} BPM · ${timeAgo(jam.created_at)}`
     button.append(name, meta)
     button.addEventListener('click', () => {
       if (button.getAttribute('aria-pressed') === 'true') return looper.stop()
-      const hits = decodeHits(jam.pattern)
+      const hits = decodeHits(jam.pattern, jam.bpm)
       if (!hits) return
       const known = KITS.find((name) => name === jam.kit)
       if (known) kit.setKit(known)
-      looper.listen(hits)
+      looper.listen(hits, jam.bpm)
       button.setAttribute('aria-pressed', 'true')
     })
     const item = document.createElement('li')
@@ -138,7 +138,7 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
   form.addEventListener('submit', (event) => {
     event.preventDefault()
     const name = nameInput.value.trim()
-    const jam = { id: '', name, pattern: looper.pattern(), kit: kit.kit(), created_at: Date.now() }
+    const jam = { id: '', name, pattern: looper.pattern(), kit: kit.kit(), bpm: looper.bpm(), created_at: Date.now() }
     const item = row(jam)
     pending.add(item)
     list.prepend(item)
@@ -149,7 +149,7 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
     api<{ id: string }>({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, pattern: jam.pattern, kit: jam.kit }),
+      body: JSON.stringify({ name, pattern: jam.pattern, kit: jam.kit, bpm: jam.bpm }),
     })
       // Keep it on the wall when the list is next shown, even if that list was fetched before it landed.
       .then(({ id }) => void (latest = [{ ...jam, id }, ...(latest ?? [])]))
