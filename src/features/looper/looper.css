@@ -1,9 +1,10 @@
 /* The looper and jam wall, under the kit controls in their quiet style: muted text buttons
    with hairline icons (index.ts, wall.ts). Nothing jumps between states: buttons that
    aren't needed yet are `inert` and fold to nothing, sliding the rest along; the name field
-   fades in over the buttons on the same line; one info line holds the count-in, the beat
-   dots or a message; and the jam list folds open. Each turns visible at once when shown
-   (so it can take focus straight away) and hidden only once it has faded out. */
+   fades in over the buttons on the same line; one info line holds the beat dots (lit
+   through the count-in too) or a message; and the jam list folds open. Each turns visible
+   at once when shown (so it can take focus straight away) and hidden only once it has
+   faded out. */
 .looper {
   --ease: cubic-bezier(0.2, 0.9, 0.3, 1);
   position: relative;
@@ -179,8 +180,7 @@
   color: var(--fg);
 }
 
-/* The info line keeps its height, empty or not. A message shows over the count-in, and
-   either over the beat dots. */
+/* The info line keeps its height, empty or not. A message shows over the beat dots. */
 .loop-info {
   height: 22px;
 }
@@ -195,9 +195,7 @@
 }
 
 .looper:not([data-playing="true"]) .loop-beats,
-.loop-info:has(.loop-count:not(:empty)) .loop-beats,
-.loop-info:has(.loop-status:not(:empty)) .loop-beats,
-.loop-info:has(.loop-status:not(:empty)) .loop-count {
+.loop-info:has(.loop-status:not(:empty)) .loop-beats {
   opacity: 0;
 }
 
@@ -251,12 +249,6 @@
 .loop-beats i.lit {
   background: currentColor;
   opacity: 1;
-}
-
-.loop-count {
-  color: var(--fg);
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
 }
 
 .loop-status {

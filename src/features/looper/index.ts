@@ -23,9 +23,9 @@ export interface Looper {
 }
 
 /**
- * A two-bar loop over the kit. Press Record: a bar of clicks counts in, then whatever's
- * played loops at the exact times it was played, while a click keeps time and a dot per
- * beat shows where the loop is. Recording again adds a layer; Undo takes the last one off.
+ * A two-bar loop over the kit. Press Record: a bar of clicks counts in, lighting the last
+ * bar's dots as if leading round into the first, then whatever's played loops at the exact
+ * times it was played, while a click keeps time and a dot per beat shows where the loop is. Recording again adds a layer; Undo takes the last one off.
  * A jam from the wall plays through the same clock, at its own tempo, in place of your loop
  * until it stops. Recording the first take, − and + by Record set the tempo, the clicks
  * following at once, until the first hit fixes it.
@@ -39,7 +39,6 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
   const record = root.querySelector<HTMLButtonElement>('[data-loop="record"]')!
   const playButton = root.querySelector<HTMLButtonElement>('[data-loop="play"]')!
   const undo = root.querySelector<HTMLButtonElement>('[data-loop="undo"]')!
-  const count = root.querySelector<HTMLElement>('.loop-count')!
   const tempo = root.querySelector<HTMLElement>('.loop-tempo')!
   const slower = tempo.querySelector<HTMLButtonElement>('[data-loop="slower"]')!
   const faster = tempo.querySelector<HTMLButtonElement>('[data-loop="faster"]')!
@@ -97,14 +96,13 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
   }
 
   /** Beat `index` from the loop's start (negative while counting in): a click while
-      recording, and, as it plays, the count-in number or the beat's dot lit. */
+      recording, and, as it plays, the beat's dot lit (the count-in lights the last bar's). */
   function tick(index: number): void {
     const at = start + index * beat
     if (recording) playTick(index % 4 === 0, at)
     const timeout = setTimeout(() => {
       pending.delete(timeout)
-      count.textContent = index < 0 ? String(-index) : ''
-      dots.forEach((dot, i) => dot.classList.toggle('lit', i === index % BEATS))
+      dots.forEach((dot, i) => dot.classList.toggle('lit', i === (index + BEATS) % BEATS))
     }, (at - audioTime()) * 1000)
     pending.add(timeout)
   }
@@ -127,7 +125,6 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
     for (const timeout of pending) clearTimeout(timeout)
     pending.clear()
     for (const dot of dots) dot.classList.remove('lit')
-    count.textContent = ''
     playing = false
     recording = false
     listening = null
