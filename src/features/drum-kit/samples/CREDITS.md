@@ -17,7 +17,7 @@ File URLs are the repository's raw URL plus the path shown:
 
 ## rock/ (SM Drums)
 
-The first seven files are stereo. Processing: cut from the start of the WAV to the stated length, linear fade-out over the last 35%, peak-normalised to -1 dBFS.
+All but bell.mp3 are stereo. Processing, unless the row says otherwise: cut from the start of the WAV to the stated length, linear fade-out over the last 35%, peak-normalised to -1 dBFS.
 
 | File | Source path | Processing |
 | --- | --- | --- |
@@ -29,3 +29,6 @@ The first seven files are stereo. Processing: cut from the start of the WAV to t
 | hihat.mp3 | `Samples/SMD Cymbals Stereo (Samples)/Hi-Hat (Samples)/01 Hat Tight 1/RR1/38_Hat_Tight_Cnt_RR1.wav` | 0.4 s |
 | ride.mp3 | `Samples/SMD Cymbals Stereo (Samples)/Ride (Samples)/Ride 20 (Samples)/RR1/18_Ride_20in_R_Cnt_Tip_RR1.wav` (100%) mixed with `Samples/SMD Cymbals Stereo (Samples)/Crash (Samples)/Crash 16 (Samples)/RR1/18_Crash_16in_R_edge_RR1.wav` (35%) | 3.0 s, fade from 1.95 s |
 | bell.mp3 | `Samples/SMD Cymbals Stereo (Samples)/Ride (Samples)/Ride 20 Bell (Samples)/RR1/18_Ride_Bell_20in_R_Tip_RR1.wav` | Mono, trimmed to the transient, 2.0 s, cosine fade over the last 50%, peak -1 dBFS. Same 20" ride and velocity layer as ride.mp3 |
+| hihat-open.mp3 | `Samples/SMD Cymbals Stereo (Samples)/Hi-Hat (Samples)/03 Hat, Open/RR1/14_Hat_Open_RR1.wav` | 2.4 s, linear fade over the last 40%, peak -1 dBFS |
+| hihat-close.mp3 | `Samples/SMD Cymbals Stereo (Samples)/Hi-Hat (Samples)/05 Hat, Foot/RR1/31_Hat_Foot_RR1.wav` | 0.5 s, linear fade over the last 35%, peak -1 dBFS |
+| ride-tip.mp3 | `Samples/SMD Cymbals Stereo (Samples)/Ride (Samples)/Ride 20 (Samples)/RR1/18_Ride_20in_R_Cnt_Tip_RR1.wav` | 2.5 s, linear fade over the last 40%, peak -1 dBFS. The ride half of ride.mp3, alone |

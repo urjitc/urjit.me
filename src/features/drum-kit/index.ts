@@ -12,26 +12,34 @@ const KEY_INSET = 14
 export const SOUND_KEY = 'sound'
 const KIT_KEY = 'kit'
 
-/** Physical keys (layout-independent `event.code`) laid out left to right like the kit. */
-const KEYS: Record<string, string> = {
-  KeyX: 'hihat',
-  KeyC: 'hihat',
-  KeyV: 'snare',
-  KeyB: 'snare',
-  Space: 'kick',
-  KeyF: 'tom-left',
-  KeyG: 'tom-left',
-  KeyH: 'tom-right',
-  KeyJ: 'tom-right',
-  KeyN: 'floor-tom',
-  KeyM: 'floor-tom',
-  KeyK: 'ride',
+/** Physical keys (layout-independent `event.code`) laid out left to right like the kit: the
+    piece each hits, its sound when not the piece's own, whether it goes unlabelled (an extra
+    for anyone who goes looking), and how far (px) its label sits in from the others, toward
+    where on the piece it's played. */
+const KEYS: Record<string, { piece: string; sound?: Sound; hidden?: true; inward?: number }> = {
+  KeyZ: { piece: 'hihat', sound: 'hihat-open' },
+  KeyX: { piece: 'hihat' },
+  KeyC: { piece: 'hihat' },
+  KeyV: { piece: 'snare' },
+  KeyB: { piece: 'snare' },
+  Space: { piece: 'kick' },
+  KeyF: { piece: 'tom-left' },
+  KeyG: { piece: 'tom-left' },
+  KeyH: { piece: 'tom-right' },
+  KeyJ: { piece: 'tom-right' },
+  KeyN: { piece: 'floor-tom' },
+  KeyM: { piece: 'floor-tom' },
+  KeyK: { piece: 'ride' },
+  // The ride's edge is the crash wash (K), its body the ping (L), and its centre the bell (O).
+  KeyL: { piece: 'ride', sound: 'ride-tip', inward: 42 },
+  KeyO: { piece: 'ride', sound: 'bell', hidden: true },
 }
+/** Z is the hi-hat pedal: pressing it opens the hat with a hit, and it stays open (the hat's
+    other keys and taps play it open, sloshing) until letting go closes it with the foot. */
+const PEDAL = 'KeyZ'
 
-/** An unlabelled extra for anyone who goes looking: a key, the piece it hits and its sound. */
-const HIDDEN_KEYS: Record<string, { piece: string; sound: string }> = {
-  KeyO: { piece: 'ride', sound: 'bell' },
-}
+/** The piece a sound is played on. */
+const pieceOf = (sound: Sound) => Object.values(KEYS).find((key) => key.sound === sound)?.piece ?? sound
 
 // A drum's skin is pushed in by the stick and springs back a touch past rest. Only the
 // head moves (its hoop and lugs are static), and moving inward it never runs into the rim.
@@ -197,39 +205,47 @@ function animateAll(
  * Sets each drum's key labels on an arc just inside its rim, each turned to follow the
  * curve and spaced by its real width. They sit at the bottom of the drum on screen unless
  * its --keys-at angle says otherwise (0deg is the right, 90deg the bottom, -90deg the top),
- * whatever the hit area's own --angle.
+ * whatever the hit area's own --angle. A label set further in (data-inward, px) gets an
+ * arc of its own, at the same angle.
  * Labels are hidden (zero size) without a keyboard, so there's nothing to place then.
  */
 function placeKeys(keyLabels: Map<HTMLElement, HTMLElement[]>): void {
-  for (const [piece, labels] of keyLabels) {
-    const widths = labels.map((label) => label.offsetWidth)
-    if (!widths.some(Boolean)) continue
-    const style = getComputedStyle(piece)
-    const centre = ((parseFloat(style.getPropertyValue('--keys-at')) || 90) * Math.PI) / 180
-    // The hit area is turned by --angle; work in screen angles, then turn back into its frame.
-    const turn = ((parseFloat(style.getPropertyValue('--angle')) || 0) * Math.PI) / 180
-    const inset = parseFloat(style.getPropertyValue('--keys-inset')) || KEY_INSET
-    const height = Math.max(...labels.map((label) => label.offsetHeight))
-    const rx = piece.offsetWidth / 2
-    const ry = piece.offsetHeight / 2
-    // Radius (as a fraction of the drum) that keeps the labels inside the rim.
-    const k = 1 - (height / 2 + inset) / ry
-    // On the lower half, going left to right means turning clockwise; on the upper half, back.
-    const below = Math.sin(centre) >= 0
-    const total = widths.reduce((sum, width) => sum + width, 0) + KEY_GAP * (widths.length - 1)
-    let along = -total / 2
-    labels.forEach((label, index) => {
-      const middle = along + widths[index]! / 2
-      along += widths[index]! + KEY_GAP
-      // Arc length to angle, measured on the arc's own radius.
-      const theta = centre + (below ? -1 : 1) * (middle / ((k * (rx + ry)) / 2))
-      const local = theta - turn
-      label.style.left = `${50 + 50 * k * Math.cos(local)}%`
-      label.style.top = `${50 + 50 * k * Math.sin(local)}%`
-      // Tangent to the rim, reading upright on screen.
-      label.style.rotate = `${theta - (below ? Math.PI / 2 : -Math.PI / 2) - turn}rad`
-    })
+  for (const [piece, all] of keyLabels) {
+    for (const [inward, labels] of groupBy(all, (label) => label.dataset.inward ?? '0')) {
+      placeArc(piece, labels, Number(inward))
+    }
   }
+}
+
+/** Sets one arc of a drum's labels, `inward` px further in than its rim arc. */
+function placeArc(piece: HTMLElement, labels: HTMLElement[], inward: number): void {
+  const widths = labels.map((label) => label.offsetWidth)
+  if (!widths.some(Boolean)) return
+  const style = getComputedStyle(piece)
+  const centre = ((parseFloat(style.getPropertyValue('--keys-at')) || 90) * Math.PI) / 180
+  // The hit area is turned by --angle; work in screen angles, then turn back into its frame.
+  const turn = ((parseFloat(style.getPropertyValue('--angle')) || 0) * Math.PI) / 180
+  const inset = (parseFloat(style.getPropertyValue('--keys-inset')) || KEY_INSET) + inward
+  const height = Math.max(...labels.map((label) => label.offsetHeight))
+  const rx = piece.offsetWidth / 2
+  const ry = piece.offsetHeight / 2
+  // Radius (as a fraction of the drum) that keeps the labels inside the rim.
+  const k = 1 - (height / 2 + inset) / ry
+  // On the lower half, going left to right means turning clockwise; on the upper half, back.
+  const below = Math.sin(centre) >= 0
+  const total = widths.reduce((sum, width) => sum + width, 0) + KEY_GAP * (widths.length - 1)
+  let along = -total / 2
+  labels.forEach((label, index) => {
+    const middle = along + widths[index]! / 2
+    along += widths[index]! + KEY_GAP
+    // Arc length to angle, measured on the arc's own radius.
+    const theta = centre + (below ? -1 : 1) * (middle / ((k * (rx + ry)) / 2))
+    const local = theta - turn
+    label.style.left = `${50 + 50 * k * Math.cos(local)}%`
+    label.style.top = `${50 + 50 * k * Math.sin(local)}%`
+    // Tangent to the rim, reading upright on screen.
+    label.style.rotate = `${theta - (below ? Math.PI / 2 : -Math.PI / 2) - turn}rad`
+  })
 }
 
 /**
@@ -293,10 +309,11 @@ export function mountDrumKit(
     keys.className = 'keys'
     keys.setAttribute('aria-hidden', 'true')
     const labels = Object.keys(KEYS)
-      .filter((code) => KEYS[code] === piece.dataset.sound)
+      .filter((code) => KEYS[code]!.piece === piece.dataset.sound && !KEYS[code]!.hidden)
       .map((code) => {
         const key = document.createElement('kbd')
         key.textContent = code.replace(/^Key/, '')
+        if (KEYS[code]!.inward) key.dataset.inward = String(KEYS[code]!.inward)
         keycaps.set(code, key)
         return key
       })
@@ -323,6 +340,8 @@ export function mountDrumKit(
   const savedKit = localStorage.getItem(KIT_KEY)
   let currentKit: Kit = KITS.find((name) => name === savedKit) ?? 'rock'
   let hold: { piece: HTMLAnchorElement; ready: boolean; timer: number } | null = null
+  /** Whether the hi-hat pedal (Z) is held open. */
+  let hatOpen = false
   // The drumstick cursor (drum-kit.css): each click brings the other stick down.
   let stick: 'left' | 'right' = 'right'
   let stickTimer: number | undefined
@@ -410,6 +429,7 @@ export function mountDrumKit(
 
   /** Plays a piece by hand (its own sound unless another is given) and moves it to match. */
   function hit(piece: HTMLElement, sound = piece.dataset.sound): void {
+    if (sound === 'hihat' && hatOpen) sound = 'hihat-open'
     const at = soundOn && sound ? playDrum(currentKit, sound) : undefined
     if (at === undefined && !nudged) {
       nudged = true
@@ -423,7 +443,8 @@ export function mountDrumKit(
 
   /** Moves a piece as it's struck with a sound: its head, its icon, and for the kick the pedal and face. */
   function move(piece: HTMLElement, sound: Sound): void {
-    if (reducedMotion.matches) return
+    // The pedal closing the hat is a foot, not a stroke: nothing to see.
+    if (reducedMotion.matches || sound === 'hihat-close') return
     if (sound === 'bell') {
       animateAll(parts.get('ride'), BELL_HIT, 260)
       bellRing.animate(BELL_RING, { duration: 650, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' })
@@ -436,7 +457,7 @@ export function mountDrumKit(
     const isKick = sound === 'kick'
     const headTiming = { ...timing, delay: isKick ? PEDAL_MS * PEDAL_IMPACT : 0 }
     animateAll([piece], keyframes, headTiming)
-    animateAll(parts.get(sound), keyframes, headTiming)
+    animateAll(parts.get(pieceOf(sound)), keyframes, headTiming)
     if (isKick) {
       for (const [name, keyframes] of [['beater', BEATER_HIT], ['footboard', FOOTBOARD_HIT]] as const) {
         animateAll(parts.get(name), keyframes, PEDAL_MS)
@@ -512,19 +533,30 @@ export function mountDrumKit(
     if (event.metaKey || event.ctrlKey || event.altKey) return
     // Typing in a field (a jam's name) isn't drumming.
     if (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable]')) return
-    const hidden = HIDDEN_KEYS[event.code]
-    const name = KEYS[event.code] ?? hidden?.piece
-    if (!name) return
+    const key = KEYS[event.code]
+    if (!key) return
     event.preventDefault() // Space never scrolls the page
     if (event.repeat) return
-    const piece = kit.querySelector<HTMLElement>(`[data-sound="${name}"]`)
-    if (piece) hit(piece, hidden?.sound)
+    const piece = kit.querySelector<HTMLElement>(`[data-sound="${key.piece}"]`)
+    if (event.code === PEDAL) hatOpen = true
+    if (piece) hit(piece, key.sound)
     keycaps.get(event.code)?.classList.add('struck')
   })
-  document.addEventListener('keyup', (event) => keycaps.get(event.code)?.classList.remove('struck'))
+  /** Lets the hi-hat pedal up: the hat closes, with the foot's chick. */
+  function closeHat(): void {
+    if (!hatOpen) return
+    hatOpen = false
+    const piece = kit.querySelector<HTMLElement>('[data-sound="hihat"]')
+    if (piece) hit(piece, 'hihat-close')
+  }
+  document.addEventListener('keyup', (event) => {
+    keycaps.get(event.code)?.classList.remove('struck')
+    if (event.code === PEDAL) closeHat()
+  })
   // A key released in another window never sends keyup here.
   addEventListener('blur', () => {
     for (const key of keycaps.values()) key.classList.remove('struck')
+    closeHat()
   })
 
   // A mouse or touch press shouldn't leave keyboard focus behind: the next key press
@@ -554,7 +586,7 @@ export function mountDrumKit(
     onPlay: (listener) => playListeners.push(listener),
     playAt(sound, at) {
       if (soundOn) playDrum(currentKit, sound, at)
-      const piece = kit.querySelector<HTMLElement>(`[data-sound="${sound === 'bell' ? 'ride' : sound}"]`)
+      const piece = kit.querySelector<HTMLElement>(`[data-sound="${pieceOf(sound)}"]`)
       // Moves when it plays, as a drum played by hand does.
       if (piece) setTimeout(() => move(piece, sound), (at - audioTime()) * 1000)
     },

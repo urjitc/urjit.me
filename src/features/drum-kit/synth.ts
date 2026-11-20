@@ -155,11 +155,11 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
     kind: 'samples',
     reverb: 0.22,
     urls: samplesFor('rock'),
-    levels: { kick: 7, hihat: 7.5, ride: -4.5, bell: -0.5 },
+    levels: { kick: 7, hihat: 7.5, 'hihat-open': 5.5, 'hihat-close': -4, ride: -4.5, 'ride-tip': -1, bell: -0.5 },
   },
   trap: {
     kind: 'synth',
-    levels: { kick: 4, hihat: 2.5, ride: -5.5, bell: -4 },
+    levels: { kick: 4, hihat: 2.5, 'hihat-open': 2.5, 'hihat-close': -1.5, ride: -5.5, 'ride-tip': -5.5, bell: -4 },
     reverb: 0.18,
     drive: 1.4,
     noiseHold: 1,
@@ -183,6 +183,8 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
       'tom-right': (p, t) => tom808(p, t, 125, 0.55),
       'floor-tom': (p, t) => tom808(p, t, 88, 0.7),
       hihat: (p, t) => metal(p, t, 10000, 0.05, 0.6),
+      'hihat-open': (p, t) => metal(p, t, 10000, 0.6, 0.5),
+      'hihat-close': (p, t) => metal(p, t, 9000, 0.025, 0.5),
       // A ride bell: two inharmonic partials ringing over a short metal tick.
       bell: (p, t) => {
         tone(p, t, 'triangle', 830, 830, 0.01, 1.1, 0.3)
@@ -194,11 +196,16 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
         metal(p, t, 8000, 1.2, 0.35)
         noise(p, t, 'highpass', 6000, 1.0, 0.12)
       },
+      // The ride alone: a ping (a high partial) over shorter metal, no wash.
+      'ride-tip': (p, t) => {
+        metal(p, t, 8000, 0.8, 0.3)
+        tone(p, t, 'sine', 3100, 3100, 0.01, 0.5, 0.06)
+      },
     },
   },
   '8bit': {
     kind: 'synth',
-    levels: { kick: 0.5, hihat: 4.5, ride: -4, bell: -1 },
+    levels: { kick: 0.5, hihat: 4.5, 'hihat-open': 4.5, 'hihat-close': 0.5, ride: -4, 'ride-tip': -4, bell: -1 },
     reverb: 0.08,
     drive: 1.2,
     steps: 8,
@@ -213,7 +220,13 @@ const SPECS: Record<Kit, SynthKit | SampleKit> = {
       'tom-right': (p, t) => tone(p, t, 'square', 250, 165, 0.05, 0.22, 0.4),
       'floor-tom': (p, t) => tone(p, t, 'square', 170, 110, 0.05, 0.28, 0.45),
       hihat: (p, t) => noise(p, t, 'highpass', 7000, 0.04, 0.4),
+      'hihat-open': (p, t) => noise(p, t, 'highpass', 7000, 0.35, 0.35),
+      'hihat-close': (p, t) => noise(p, t, 'highpass', 6000, 0.02, 0.4),
       ride: (p, t) => noise(p, t, 'highpass', 3000, 0.7, 0.25),
+      'ride-tip': (p, t) => {
+        noise(p, t, 'highpass', 5000, 0.4, 0.2)
+        tone(p, t, 'square', 2093, 2093, 0.01, 0.15, 0.06)
+      },
       bell: (p, t) => {
         tone(p, t, 'square', 1047, 1047, 0.01, 0.4, 0.22)
         tone(p, t, 'square', 1568, 1568, 0.01, 0.25, 0.1)
@@ -344,6 +357,35 @@ function trimmed(audio: AudioContext, into: AudioNode, levels: Levels, name: str
   return trim
 }
 
+/** Hi-hat sounds: any of them closes (chokes) an open hat ringing from before it. */
+const HATS = new Set(['hihat', 'hihat-open', 'hihat-close'])
+/** Open hats that may still ring, and when every hat sound is scheduled (seconds on the
+    audio clock), so a choke lands even when an open hat is scheduled after the stroke
+    that closes it (the looper schedules a little ahead, not always in order). */
+let openHats: { at: number; level: GainNode }[] = []
+let hatStrokes: number[] = []
+
+/** Fades a hit's level to nothing from `at`, quickly, the way a closing hi-hat stops. */
+function choke(level: GainNode, at: number): void {
+  level.gain.setValueAtTime(level.gain.value, at)
+  level.gain.setTargetAtTime(0, at, 0.015)
+}
+
+/** Closes the open hats ringing before a hat sound at `at`; an open hat is itself closed
+    by the first hat sound after it, if that's already scheduled. */
+function hatPlayed(name: string, at: number, level: GainNode, now: number): void {
+  // Open hats have rung out within 3 s (the sample is 2.4).
+  openHats = openHats.filter((open) => open.at > now - 3)
+  for (const open of openHats) if (open.at < at) choke(open.level, at)
+  openHats = openHats.filter((open) => open.at >= at)
+  if (name === 'hihat-open') {
+    const closing = hatStrokes.filter((stroke) => stroke > at).sort((a, b) => a - b)[0]
+    if (closing === undefined) openHats.push({ at, level })
+    else choke(level, closing)
+  }
+  hatStrokes = [...hatStrokes.filter((stroke) => stroke > now - 1), at]
+}
+
 /**
  * Wakes the audio after a tap. On touch screens a finger landing isn't yet a gesture that
  * lets a page make sound; lifting it is. A first tap's hit, made as the finger landed,
@@ -376,13 +418,17 @@ export function playDrum(kit: Kit, name: string, at = getOutput().audio.currentT
     void audio.resume()
     const source = audio.createBufferSource()
     source.buffer = buffer
-    source.connect(trimmed(audio, input, spec.levels, name))
+    const level = trimmed(audio, input, spec.levels, name)
+    source.connect(level)
     source.start(at)
+    if (HATS.has(name)) hatPlayed(name, at, level, audio.currentTime)
     return at
   }
   const play = playFor(kit, spec)
   void play.audio.resume()
-  spec.voices[name]?.({ ...play, out: trimmed(play.audio, play.out, spec.levels, name) }, at)
+  const level = trimmed(play.audio, play.out, spec.levels, name)
+  spec.voices[name]?.({ ...play, out: level }, at)
+  if (HATS.has(name)) hatPlayed(name, at, level, play.audio.currentTime)
   return at
 }
 
