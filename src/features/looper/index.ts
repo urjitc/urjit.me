@@ -111,6 +111,7 @@ export function mountLooper(root: HTMLElement, kit: DrumKit): void {
     if (!browsing) wall.close()
     if (mode !== 'listening') wall.unmark()
     root.dataset.playing = String(timer !== undefined)
+    root.dataset.mode = mode
     if (mode === 'naming') nameInput.focus()
   }
 

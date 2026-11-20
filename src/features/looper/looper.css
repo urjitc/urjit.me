@@ -193,7 +193,8 @@
   color: var(--fg);
 }
 
-/* The info line keeps its height, empty or not. A message shows over the beat dots. */
+/* The info line keeps its height, empty or not. A message shows over the beat dots, which
+   are only for your own loop, not a jam from the wall. */
 .loop-info {
   height: 22px;
 }
@@ -208,6 +209,7 @@
 }
 
 .looper:not([data-playing="true"]) .loop-beats,
+.looper[data-mode="listening"] .loop-beats,
 .loop-info:has(.loop-status:not(:empty)) .loop-beats {
   opacity: 0;
 }
