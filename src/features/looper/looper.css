@@ -30,6 +30,10 @@
   grid-area: 1 / 1;
 }
 
+.loop-bar {
+  justify-self: stretch;
+}
+
 .loop-buttons,
 .post-form {
   display: flex;
@@ -38,6 +42,23 @@
   transition:
     opacity 180ms ease-out,
     translate 180ms var(--ease);
+}
+
+/* Record holds the middle whatever else shows, so it never moves under a finger: the
+   buttons it brings unfold out to either side of it. */
+.loop-buttons {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  width: 100%;
+}
+
+.loop-side {
+  display: flex;
+  align-items: center;
+}
+
+.loop-side:first-child {
+  justify-content: flex-end;
 }
 
 .loop-buttons[inert],
@@ -142,9 +163,20 @@
   }
 }
 
-/* Same width either way, so the row doesn't shift. */
+/* Same width either way (Play or Stop, Record or Done), so nothing shifts. */
 [data-loop="play"] .label {
   min-width: 2.2em;
+}
+
+[data-loop="record"] .label {
+  min-width: 3.1em;
+}
+
+/* A phone's too narrow for every label on Record's right, so Undo is its arrow alone. */
+@media (max-width: 440px) {
+  [data-loop="undo"] .label {
+    display: none;
+  }
 }
 
 [data-loop="play"] .stop,
@@ -211,7 +243,7 @@
 
 .looper .loop-tempo button {
   display: grid;
-  padding: 3px 6px;
+  padding: 3px 4px;
 }
 
 .looper .loop-tempo button:focus-visible {
