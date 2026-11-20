@@ -95,7 +95,6 @@ export function mountLooper(root: HTMLElement, kit: DrumKit): void {
     const layering = mode === 'recording' && !firstTake
     buttons.inert = mode === 'naming'
     form.inert = mode !== 'naming'
-    record.setAttribute('aria-pressed', String(mode === 'recording'))
     record.querySelector('.label')!.textContent = mode === 'recording' ? 'Done' : 'Record'
     tempo.inert = !firstTake || take.length > 0
     bpmLabel.textContent = String(bpm)

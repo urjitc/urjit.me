@@ -1,10 +1,10 @@
 /* The looper and jam wall, under the kit controls in their quiet style: muted text buttons
    with hairline icons (index.ts, wall.ts). Nothing jumps between states: buttons that
-   aren't needed yet are `inert` and fold to nothing, sliding the rest along; the name field
-   fades in over the buttons on the same line; one info line holds the beat dots (lit
-   through the count-in too) or a message; and the jam list folds open. Each turns visible
-   at once when shown (so it can take focus straight away) and hidden only once it has
-   faded out. */
+   aren't needed are `inert` and fold to nothing, sliding the rest along (mid-loop, ones
+   that can't be used for a moment just dim); the name field fades in over the buttons on
+   the same line; one info line holds the beat dots (lit through the count-in too) or a
+   message; and the jam list folds open. Each turns visible at once when shown (so it can
+   take focus straight away) and hidden only once it has faded out. */
 .looper {
   --ease: cubic-bezier(0.2, 0.9, 0.3, 1);
   position: relative;
@@ -124,24 +124,18 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* Record fills its ring and pulses while recording; Play turns to Stop while playing. */
+/* Record turns to a tick while recording (Done); Play turns to Stop while playing. */
 .looper [data-loop="record"] {
   color: var(--fg);
 }
 
-[data-loop="record"] circle {
-  transition: fill 150ms;
+[data-loop="record"] .done,
+.looper[data-mode="recording"] [data-loop="record"] circle {
+  display: none;
 }
 
-[data-loop="record"][aria-pressed="true"] circle {
-  fill: currentColor;
-  animation: loop-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes loop-pulse {
-  50% {
-    opacity: 0.35;
-  }
+.looper[data-mode="recording"] [data-loop="record"] .done {
+  display: inline;
 }
 
 /* Same width either way (Play or Stop, Record or Done), so nothing shifts. */
