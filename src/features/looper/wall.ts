@@ -34,7 +34,8 @@ async function api<T>(init?: RequestInit): Promise<T> {
  * field. Nobody else sees a jam until it passes. Jams folds open the list, where tapping a
  * jam plays it on the kit right above (tapping again stops it). Jams are for listening:
  * playing one leaves your own loop alone. The list is fetched as the page loads, so Jams
- * opens at once; each open fetches it afresh for the next.
+ * opens at once; each open fetches it afresh for the next. Post and Jams (and the list) fold
+ * away while recording.
  */
 export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): { refresh(): void } {
   const buttons = root.querySelector<HTMLElement>('.loop-buttons')!
@@ -68,7 +69,11 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
   }
 
   function refresh(): void {
-    postButton.inert = looper.pattern() === '' || root.dataset.listening === 'true'
+    // While recording, only the loop's own buttons show.
+    const recording = root.dataset.recording === 'true'
+    postButton.inert = recording || looper.pattern() === '' || root.dataset.listening === 'true'
+    toggle.inert = recording
+    if (recording) hideList()
     // A jam stops when anything else plays: unmark its row.
     if (root.dataset.listening !== 'true') {
       for (const row of list.querySelectorAll('[aria-pressed="true"]')) row.setAttribute('aria-pressed', 'false')
@@ -93,6 +98,11 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
     list.replaceChildren(...pending, ...(latest ?? []).map(row))
     if (!latest) say('Couldn’t load the jams.', true)
     else if (!latest.length && !pending.size) say('No jams yet. Record the first!', true)
+  }
+
+  function hideList(): void {
+    drawer.inert = true
+    toggle.setAttribute('aria-expanded', 'false')
   }
 
   function row(jam: Jam): HTMLLIElement {
@@ -127,11 +137,7 @@ export function mountJamWall(root: HTMLElement, looper: Looper, kit: DrumKit): {
   })
   // Post stays off until there's a name (spaces alone don't count).
   nameInput.addEventListener('input', () => (submit.disabled = !nameInput.value.trim()))
-  toggle.addEventListener('click', () => {
-    if (drawer.inert) return void showList()
-    drawer.inert = true
-    toggle.setAttribute('aria-expanded', 'false')
-  })
+  toggle.addEventListener('click', () => (drawer.inert ? void showList() : hideList()))
   // A new recording makes any message stale.
   root.querySelector('[data-loop="record"]')!.addEventListener('click', () => say(''))
 

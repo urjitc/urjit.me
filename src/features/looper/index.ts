@@ -27,8 +27,8 @@ export interface Looper {
  * played loops at the exact times it was played, while a click keeps time and a dot per
  * beat shows where the loop is. Recording again adds a layer; Undo takes the last one off.
  * A jam from the wall plays through the same clock, at its own tempo, in place of your loop
- * until it stops. Before the first take, − and + on the info line set the tempo; from then
- * it's fixed until every layer's undone.
+ * until it stops. Recording the first take, − and + by Record set the tempo, the clicks
+ * following at once, until the first hit fixes it.
  *
  * A hit is kept at the audio-clock time its sound played, and the loop replays it at that
  * time, so it comes back exactly as it was heard: the speakers' delay is the same both
@@ -75,8 +75,9 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
     playButton.querySelector('.label')!.textContent = playing ? 'Stop' : 'Play'
     undo.inert = !hasLoop || listening !== null
     root.dataset.playing = String(playing)
+    root.dataset.recording = String(recording)
     root.dataset.listening = String(listening !== null)
-    tempo.inert = playing
+    tempo.inert = !recording || layers.length > 1
     bpmLabel.textContent = String(bpm)
     slower.disabled = hasLoop || bpm <= BPM.min
     faster.disabled = hasLoop || bpm >= BPM.max
@@ -142,6 +143,19 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
     run(0.05, jamBpm)
   }
 
+  /** Sets the tempo while the first take's clicks play: they carry on from the last one
+      scheduled, at the new spacing. */
+  function setTempo(next: number): void {
+    const last = nextBeat - 1
+    const at = start + last * beat
+    bpm = next
+    beat = beatSeconds(bpm)
+    loop = loopSeconds(bpm)
+    start = at - last * beat
+    scheduled = last * beat
+    render()
+  }
+
   kit.onPlay((sound, time = audioTime()) => {
     if (!recording) return
     const played = time - start
@@ -167,8 +181,8 @@ export function mountLooper(root: HTMLElement, kit: DrumKit, onChange: () => voi
   })
 
   playButton.addEventListener('click', () => (playing ? stop() : run(0.05)))
-  slower.addEventListener('click', () => ((bpm -= BPM.step), render()))
-  faster.addEventListener('click', () => ((bpm += BPM.step), render()))
+  slower.addEventListener('click', () => setTempo(bpm - BPM.step))
+  faster.addEventListener('click', () => setTempo(bpm + BPM.step))
 
   undo.addEventListener('click', () => {
     // While recording, the first Undo clears this take; after that, earlier layers.
