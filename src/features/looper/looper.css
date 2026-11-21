@@ -1,10 +1,9 @@
-/* The looper and jam wall, under the kit controls in their quiet style: muted text buttons
-   with hairline icons (index.ts, wall.ts). Nothing jumps between states: buttons that
-   aren't needed are `inert` and fold to nothing, sliding the rest along (mid-loop, ones
-   that can't be used for a moment just dim); the name field fades in over the buttons on
-   the same line; one info line holds the beat dots (lit through the count-in too) or a
-   message; and the jam list folds open. Each turns visible at once when shown (so it can
-   take focus straight away) and hidden only once it has faded out. */
+/* The looper, under the kit controls in their quiet style: muted text buttons with
+   hairline icons (index.ts). Nothing jumps between states: buttons that aren't needed are
+   `inert` and fold to nothing, sliding the rest along (mid-loop, ones that can't be used
+   for a moment just dim), turning visible at once when shown (so they can take focus
+   straight away) and hidden only once faded out; the line under them holds the beat dots,
+   lit through the count-in too. */
 .looper {
   --ease: cubic-bezier(0.2, 0.9, 0.3, 1);
   position: relative;
@@ -18,39 +17,12 @@
   font-weight: 400;
 }
 
-/* The buttons and the name field share one line, crossfading. */
-.loop-bar,
-.loop-info {
-  display: grid;
-  place-items: center;
-}
-
-.loop-bar > *,
-.loop-info > * {
-  grid-area: 1 / 1;
-}
-
 /* Record leads and the rest follow on its right, so a button folding in or out only
    slides the row a little (one fold, centred), never swaps what's where. */
-.loop-buttons,
-.post-form {
+.loop-buttons {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    opacity 180ms ease-out,
-    translate 180ms var(--ease);
-}
-
-.loop-buttons[inert],
-.post-form[inert] {
-  opacity: 0;
-  visibility: hidden;
-  translate: 0 3px;
-  transition:
-    opacity 180ms ease-out,
-    translate 180ms var(--ease),
-    visibility 0s 180ms;
 }
 
 .looper button {
@@ -163,48 +135,20 @@
   display: inline;
 }
 
-.post-form input {
-  width: 16ch;
-  margin-right: 4px;
-  padding: 2px 8px;
-  border: 1px solid color-mix(in srgb, var(--fg) 35%, transparent);
-  border-radius: 6px;
-  background: none;
-  color: var(--fg);
-  font: inherit;
-}
-
-.post-form input::placeholder {
-  color: var(--muted);
-}
-
-.post-form input:focus-visible {
-  outline: none;
-  border-color: var(--fg);
-}
-
-.looper .post-form [type="submit"] {
-  color: var(--fg);
-}
-
-/* The info line keeps its height, empty or not. A message shows over the beat dots, which
-   are only for your own loop, not a jam from the wall. */
+/* The beat dots' line keeps its height, shown or not. */
 .loop-info {
+  display: grid;
+  place-items: center;
   height: 22px;
-}
-
-.loop-info > * {
-  transition: opacity 180ms ease-out;
 }
 
 .loop-beats {
   display: flex;
   gap: 9px;
+  transition: opacity 180ms ease-out;
 }
 
-.looper:not([data-playing="true"]) .loop-beats,
-.looper[data-mode="listening"] .loop-beats,
-.loop-info:has(.loop-status:not(:empty)) .loop-beats {
+.looper:not([data-playing="true"]) .loop-beats {
   opacity: 0;
 }
 
@@ -258,69 +202,6 @@
 .loop-beats i.lit {
   background: currentColor;
   opacity: 1;
-}
-
-.loop-status {
-  margin: 0;
-  color: var(--muted);
-}
-
-/* The wall folds open under the info line: a short list that scrolls, each jam a row
-   that plays it, ringed in hairline while it plays. */
-.jam-drawer {
-  display: grid;
-  grid-template-rows: 1fr;
-  width: min(360px, 100%);
-  transition:
-    grid-template-rows 240ms var(--ease),
-    opacity 200ms ease-out;
-}
-
-.jam-drawer[inert] {
-  grid-template-rows: 0fr;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    grid-template-rows 240ms var(--ease),
-    opacity 200ms ease-out,
-    visibility 0s 240ms;
-}
-
-.jam-list {
-  min-height: 0;
-  max-height: 260px;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  list-style: none;
-}
-
-.looper .jam {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 5px 10px;
-  border: 1px solid transparent;
-  color: var(--fg);
-  text-align: left;
-  transition: border-color 140ms;
-}
-
-.looper .jam[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--fg) 55%, transparent);
-}
-
-.jam span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.jam-meta {
-  flex: none;
-  color: var(--muted);
-  font-size: 13px;
 }
 
 @media (prefers-reduced-motion: reduce) {
