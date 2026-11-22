@@ -33,7 +33,7 @@ export function toMarkdown(html: string): string {
       const sub = first(/class="row-sub">([\s\S]*?)<\/span>/, row)
       const date = first(/class="row-date">([\s\S]*?)<\/span>/, row)
       const link = href.startsWith('/') ? `https://urjit.me${href}` : href
-      const about = `${role ? `${role}. ` : ''}${sub}`
+      const about = [role, sub].filter(Boolean).join('. ')
       lines.push(`- [${name}](${link})${about ? `: ${about}` : ''}${date ? ` (${date})` : ''}`)
     }
   }
